@@ -1,6 +1,6 @@
 <?php
 
-namespace Site\Api\Forms;
+namespace Site\Api\Parameters;
 
 use Bitrix\Main\UserTable;
 use Bitrix\Main\Security\Random;
@@ -10,13 +10,8 @@ use Bitrix\Main\Security\Random;
  *
  * @author AidSoul <work-aidsoul@outlook.com>
  */
-class SignupForm extends Form
+class SignupParameter extends Parameter
 {
-    // protected array $mail = [
-    //     'eventType' => 'NEW_USER_CONFIRM',
-    //     'mailTemplateId' => 5
-    // ];
-
     protected array $currentParams = [
         'fio' => [
             'name' => 'ФИО',
@@ -30,7 +25,6 @@ class SignupForm extends Form
             'name' => 'Пароль',
             'required' => true
         ]
-
     ];
 
     /**

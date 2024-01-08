@@ -2,9 +2,10 @@
 
 namespace Site\Api\Controllers;
 
-use Site\Api\Forms\SignupForm;
 use Site\Api\Prefilters\ApiKey;
 use Bitrix\Main\Engine\Controller;
+use Site\Api\Parameters\SignupParameter;
+use Site\Api\Traits\ControllerTrait;
 
 /**
  * SignupController class
@@ -13,6 +14,8 @@ use Bitrix\Main\Engine\Controller;
  */
 class SignupController extends Controller
 {
+    use ControllerTrait;
+
     public function getDefaultPreFilters()
     {
         return [
@@ -27,12 +30,7 @@ class SignupController extends Controller
 
     public function getAction()
     {
-        $form = new SignupForm();
-        $form
-        ->getPostParams()
-        ->validation()
-        ->action();
-        $this->errorCollection = $form->getErrorCollection();
-        return $form->getReplyData();
+        return $this->postParameters(new SignupParameter());
     }
+
 }

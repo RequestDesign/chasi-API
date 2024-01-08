@@ -1,6 +1,6 @@
 <?php
 
-namespace Site\Api\Forms;
+namespace Site\Api\Parameters;
 
 use Bitrix\Main\Application;
 use Bitrix\Main\Context;
@@ -8,17 +8,12 @@ use Bitrix\Main\Error;
 use Bitrix\Main\ErrorCollection;
 
 /**
- * Класс для работы с данными формы
- * TODO Каждая форма новый класс под общим интерфейсом
- * Запуск через BX.ajax.runComponentAction
- * ajaxAction
- *
- * ToDo Обработку полей формы нужно вынести в отдельные классы
+ * Класс для работы с параметрами
  *
  * @author work-aidsoul@outlook.com
  * https://github.com/aidsoul/bitrix-form
  */
-class Form
+abstract class Parameter
 {
     /**
      * @var ErrorCollection
@@ -56,7 +51,7 @@ class Form
     protected array $cleanParams = [];
 
     /**
-     * Неочищенные поля формы
+     * Неочищенные параметры
      *
      * @var array
      */
@@ -103,14 +98,6 @@ class Form
      */
     private array $replyData = [];
 
-    /**
-     * Массив доступен в шаблоне
-     * $arResult['DATA']
-     *
-     * @var array
-     */
-    protected array $formData = [];
-
     public function __construct()
     {
         $this->errorCollection = new ErrorCollection();
@@ -123,11 +110,26 @@ class Form
      *
      * @return self
      */
-    public function getPostParams(): self
+    public function getPostParameters(): self
     {
         $request = $this->context->getRequest();
         if ($params = $request->getPostList()->toArray()) {
-            $this->params = $params;
+            $this->params = array_merge($this->params, $params);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Получить Get - параметры
+     *
+     * @return self
+     */
+    public function getGetParameters(): self
+    {
+        $request = $this->context->getRequest();
+        if ($params = $request->getQueryList()->toArray()) {
+            $this->params = array_merge($this->params, $params);
         }
 
         return $this;
@@ -247,6 +249,7 @@ class Form
                             $param,
                             'В поле "' . $param . '" недопустимые символы!'
                         );
+                        continue;
                     }
                 }
                 if (method_exists($this, $param) && $value) {
@@ -278,17 +281,6 @@ class Form
     }
 
     /**
-     * Действие с данными формы
-     *
-     *
-     * @return array
-     */
-    public function formDataAction(): array
-    {
-        return [];
-    }
-
-    /**
      * Выполнить главное действие
      *
      * @return void
@@ -302,28 +294,10 @@ class Form
     }
 
     /**
-     * Установить данные для формы
+     * Получить коллекцию ошибок
      *
-     * $this->formData
-     *
-     * @param array $formData
-     * @return void
+     * @return ErrorCollection
      */
-    public function setFormData(array $formData): void
-    {
-        $this->formData = $formData;
-    }
-
-    /**
-     * Получить данные формы
-     *
-     * @return array
-     */
-    public function getFormData(): array
-    {
-        return $this->formData;
-    }
-
     public function getErrorCollection(): ErrorCollection
     {
         return $this->errorCollection;
