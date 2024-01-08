@@ -13,25 +13,25 @@ class site_api extends CModule
     {
         \Bitrix\Main\ModuleManager::registerModule($this->MODULE_ID);
 
-        \Bitrix\Main\EventManager::getInstance()->registerEventHandler(
-            'main',
-            'onPageStart',
-            $this->MODULE_ID,
-            '\Almat\Su\EventHandler',
-            'disableBitrixAuth'
-        );
+        // \Bitrix\Main\EventManager::getInstance()->registerEventHandler(
+        //     'main',
+        //     'onPageStart',
+        //     $this->MODULE_ID,
+        //     '\Almat\Su\EventHandler',
+        //     'disableBitrixAuth'
+        // );
     }
 
     public function DoUninstall()
     {
         \Bitrix\Main\ModuleManager::unRegisterModule($this->MODULE_ID);
 
-        \Bitrix\Main\EventManager::getInstance()->registerEventHandler(
-            'main',
-            'onPageStart',
-            $this->MODULE_ID,
-            '\Almat\Su\EventHandler',
-            'disableBitrixAuth'
-        );
+        // \Bitrix\Main\EventManager::getInstance()->registerEventHandler(
+        //     'main',
+        //     'onPageStart',
+        //     $this->MODULE_ID,
+        //     '\Almat\Su\EventHandler',
+        //     'disableBitrixAuth'
+        // );
     }
 }
