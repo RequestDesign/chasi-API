@@ -6,7 +6,7 @@ use Bitrix\Main\UserTable;
 use Bitrix\Main\Security\Random;
 
 /**
- * SignupForm class
+ * SignupParameter class
  *
  * @author AidSoul <work-aidsoul@outlook.com>
  */
@@ -114,9 +114,7 @@ class SignupParameter extends Parameter
         // Авторизация
         if ($ID) {
             if ($USER->Authorize($ID)) {
-                $reply  = [
-                    'userId' => $ID
-                ];
+                $reply = ['status' => 'registered'];
             }
         } else {
             $this->setError('user', $user->LAST_ERROR);
