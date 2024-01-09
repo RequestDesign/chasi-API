@@ -202,7 +202,7 @@ abstract class Parameter
     public function validation(): self
     {
         if (!$this->params) {
-            $this->setError('params', 'There are no fields');
+            $this->setError('noParams', 'There are no fields');
         } else {
             if (!$this->currentParams) {
                 $this->setError('requiredParameters', 'Required parameters are not specified');

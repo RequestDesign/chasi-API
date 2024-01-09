@@ -1,5 +1,7 @@
 <?php
 
+use Bitrix\Main\ModuleManager;
+
 class site_api extends CModule
 {
     var $MODULE_ID = 'site.api';
@@ -11,27 +13,11 @@ class site_api extends CModule
 
     public function DoInstall()
     {
-        \Bitrix\Main\ModuleManager::registerModule($this->MODULE_ID);
-
-        // \Bitrix\Main\EventManager::getInstance()->registerEventHandler(
-        //     'main',
-        //     'onPageStart',
-        //     $this->MODULE_ID,
-        //     '\Almat\Su\EventHandler',
-        //     'disableBitrixAuth'
-        // );
+        ModuleManager::registerModule($this->MODULE_ID);
     }
 
     public function DoUninstall()
     {
-        \Bitrix\Main\ModuleManager::unRegisterModule($this->MODULE_ID);
-
-        // \Bitrix\Main\EventManager::getInstance()->registerEventHandler(
-        //     'main',
-        //     'onPageStart',
-        //     $this->MODULE_ID,
-        //     '\Almat\Su\EventHandler',
-        //     'disableBitrixAuth'
-        // );
+        ModuleManager::unRegisterModule($this->MODULE_ID);
     }
 }
