@@ -1,15 +1,16 @@
 <?php
 
-namespace Site\Api\Controllers;
+namespace Site\Api\Http\Controllers;
 
-use Site\Api\Prefilters\ApiKey;
+use Bitrix\Main\Engine\ActionFilter;
 use Bitrix\Main\Engine\Controller;
-use Site\Api\Parameters\LoginParameter;
+use Site\Api\Http\Prefilters\Csrf;
 use Site\Api\Parameters\SignupParameter;
+use Site\Api\Parameters\UserParameter;
 use Site\Api\Traits\ControllerTrait;
 
 /**
- * UserController
+ * UserController class
  *
  * @author AidSoul <work-aidsoul@outlook.com>
  */
@@ -20,18 +21,13 @@ class UserController extends Controller
     public function configureActions(): array
     {
         return [
-            'signup' => [
+            'get' => [
                 'prefilters' => [
-                    new ApiKey()
+                    new Csrf(),
+                    new ActionFilter\Authentication()
                 ],
                 'postfilters' => []
             ],
-            'login' => [
-                'prefilters' => [
-                    new ApiKey()
-                ],
-                'postfilters' => []
-            ]
         ];
     }
 
@@ -40,13 +36,8 @@ class UserController extends Controller
         return parent::prepareParams();
     }
 
-    public function signupAction()
+    public function getAction()
     {
-        return $this->postParameters(new SignupParameter());
-    }
-
-    public function loginAction()
-    {
-        return $this->postParameters(new LoginParameter());
+        return $this->getReplyAction('post', new UserParameter());
     }
 }

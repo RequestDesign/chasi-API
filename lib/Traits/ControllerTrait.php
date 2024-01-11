@@ -10,37 +10,33 @@ trait ControllerTrait
      * Хелпер для правильного формирования вывода ответа с
      * формы
      *
-     * @param Form $form
+     * @param string $requestType get/post
+     * @param Parameter $form
      * @return array
      */
-    private function allParameters(Parameter $form): array
+    private function getReplyAction(string $requestType = 'get', Parameter $parameter): array
     {
-        $form
-        ->getGetParameters()
+        /**
+         * @var $request \Bitrix\Main\HttpRequest
+         */
+        $request = $this->getRequest();
+        $params = [];
+        switch ($requestType) {
+            case 'get':
+                $params = $request->getQueryList()->toArray();
+                break;
+            case 'post':
+                $params = $request->getPostList()->toArray();
+                if ($files = $request->getFileList()->toArray()) {
+                    $files = array_merge($params, $files);
+                }
+                break;
+        }
+        $parameter
+        ->setParams($params)
         ->validation()
         ->action();
-        $this->errorCollection = $form->getErrorCollection();
-        return $form->getReplyData();
-    }
-
-    private function getParameters(Parameter $form): array
-    {
-        $form
-        ->getGetParameters()
-        ->validation()
-        ->action();
-        $this->errorCollection = $form->getErrorCollection();
-        return $form->getReplyData();
-    }
-    
-    private function postParameters(Parameter $form): array
-    {
-        $form
-        ->getPostParameters()
-        ->getFileList()
-        ->validation()
-        ->action();
-        $this->errorCollection = $form->getErrorCollection();
-        return $form->getReplyData();
+        $this->errorCollection = $parameter->getErrorCollection();
+        return $parameter->getReplyData();
     }
 }

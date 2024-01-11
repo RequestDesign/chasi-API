@@ -2,7 +2,6 @@
 
 namespace Site\Api\Parameters;
 
-use Bitrix\Main\Application;
 use Bitrix\Main\Context;
 use Bitrix\Main\Error;
 use Bitrix\Main\ErrorCollection;
@@ -19,11 +18,6 @@ abstract class Parameter
      * @var ErrorCollection
      */
     protected ErrorCollection $errorCollection;
-
-    /**
-     * @var Application
-     */
-    protected Application $application;
 
     /**
      * @var Context
@@ -101,53 +95,6 @@ abstract class Parameter
     public function __construct()
     {
         $this->errorCollection = new ErrorCollection();
-        $this->application = Application::getInstance();
-        $this->context = $this->application->getContext();
-    }
-
-    /**
-     * Получить POST - параметры
-     *
-     * @return self
-     */
-    public function getPostParameters(): self
-    {
-        $request = $this->context->getRequest();
-        if ($params = $request->getPostList()->toArray()) {
-            $this->params = array_merge($this->params, $params);
-        }
-
-        return $this;
-    }
-
-    /**
-     * Получить Get - параметры
-     *
-     * @return self
-     */
-    public function getGetParameters(): self
-    {
-        $request = $this->context->getRequest();
-        if ($params = $request->getQueryList()->toArray()) {
-            $this->params = array_merge($this->params, $params);
-        }
-
-        return $this;
-    }
-
-    /**
-     * Получить файлы
-     *
-     * @return self
-     */
-    public function getFileList(): self
-    {
-        $request = $this->context->getRequest();
-        if ($files = $request->getFileList()->toArray()) {
-            $this->params = array_merge($this->params, $files);
-        }
-
-        return $this;
     }
 
     /**
@@ -191,6 +138,50 @@ abstract class Parameter
         return $this;
     }
 
+
+    /**
+     * validateBaseParams function
+     *
+     * @param string $param
+     * @param string $value
+     * @return void
+     */
+    private function validateBaseParams(string $param, string $value): void
+    {
+        $value = strip_tags(htmlspecialcharsbx($value));
+        $currentParams = &$this->currentParams[$param];
+        if (!in_array($param, $this->ignoreFieldArr)) {
+            if (preg_match("/[<>\/]+/ium", $value)) {
+                $this->setError(
+                    $param,
+                    'В поле "' . $param . '" недопустимые символы!'
+                );
+            } else {
+                $method = $param;
+                if ($currentParams['validateMethod']) {
+                    $method = $currentParams['validateMethod'];
+                }
+                if (method_exists($this, $method)) {
+                    $this->$method($value);
+                }
+            }
+        }
+    }
+
+    /**
+     * validateFileParams function
+     *
+     * @param string $param
+     * @param array $value
+     * @return void
+     */
+    private function validateFileParams(string $param, array $value): void
+    {
+        if (method_exists($this, $param)) {
+            $this->$param($value);
+        }
+    }
+
     /**
      * Функция валидации полей
      *
@@ -204,16 +195,6 @@ abstract class Parameter
         if (!$this->params) {
             $this->setError('noParams', 'There are no fields');
         } else {
-            if (!$this->currentParams) {
-                $this->setError('requiredParameters', 'Required parameters are not specified');
-                return $this;
-            }
-            $currentParamsCount = count($this->currentParams);
-            $paramsCount = count($this->params);
-            if ($paramsCount !== $currentParamsCount) {
-                $this->setError('parameterCount', 'Min number of parameters = ' . $currentParamsCount);
-                return $this;
-            }
             $currentParamsErrors = false;
             foreach ($this->currentParams as $k => $v) {
                 if ($v['required'] === true) {
@@ -230,32 +211,15 @@ abstract class Parameter
                 return $this;
             }
             foreach ($this->params as $param => $value) {
-                if (is_array($value)) {
-                    if (method_exists($this, $param)) {
-                        $this->$param($value);
-                    }
+                if (!$param || !$value) {
                     continue;
                 }
-                $value = strip_tags(htmlspecialcharsbx($value));
-                if (!$value) {
-                    $this->setError(
-                        $k,
-                        'The parameter is empty(' . $k . ')'
-                    );
-                }
-                if (!in_array($param, $this->ignoreFieldArr)) {
-                    if (preg_match("/[<>\/]+/ium", $value)) {
-                        $this->setError(
-                            $param,
-                            'В поле "' . $param . '" недопустимые символы!'
-                        );
-                        continue;
-                    }
-                }
-                if (method_exists($this, $param) && $value) {
-                    $this->$param($value);
-                }
                 $this->dirtyParams[$param] = $value;
+                if (is_array($value)) {
+                    $this->validateFileParams($param, $value);
+                } else {
+                    $this->validateBaseParams($param, $value);
+                }
             }
         }
         return $this;
@@ -289,7 +253,11 @@ abstract class Parameter
     {
         if ($this->errorCollection->isEmpty()) {
             $this->replyData = $this->successAction();
-            $this->sendMail();
+            if ($this->errorCollection->isEmpty()) {
+                if (isset($this->mail['eventType'])) {
+                    $this->sendMail();
+                }
+            }
         }
     }
 
@@ -310,17 +278,14 @@ abstract class Parameter
      */
     protected function sendMail(): void
     {
-        global $USER;
-        if (!empty($this->mail)) {
-            \CEvent::Send(
-                $this->mail['eventType'],
-                SITE_ID,
-                $this->cleanParams,
-                'N',
-                $this->mail['mailTemplateId'],
-                $this->mailAttachments
-            );
-        }
+        \CEvent::Send(
+            $this->mail['eventType'],
+            SITE_ID,
+            $this->cleanParams,
+            'N',
+            $this->mail['mailTemplateId'],
+            $this->mailAttachments
+        );
 
         // if (!empty($this->mail['email'])) {
         //     global $USER;

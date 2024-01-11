@@ -1,6 +1,6 @@
 <?php
 
-namespace Site\Api\Prefilters;
+namespace Site\Api\Http\Prefilters;
 
 use Bitrix\Main\Context;
 use Bitrix\Main\Engine\ActionFilter\Base;
@@ -13,7 +13,7 @@ use Bitrix\Main\Error;
  * 
  * @author AidSoul <work-aidsoul@outlook.com>
  */
-class ApiKey extends Base
+final class ApiKey extends Base
 {
     public function onBeforeAction(Event $event)
     {
