@@ -1,22 +1,22 @@
 <?php
 
-namespace Site\Api\Parameters;
+namespace Site\Api\Services\Parameters;
 
 use Bitrix\Main\UserTable;
 
 /**
- * ConfirmRegistration class
+ * LoginParameter class
  *
  * @author AidSoul <work-aidsoul@outlook.com>
  */
-class ConfirmRegistration extends Parameter
+class LoginParameter extends Parameter
 {
     protected array $currentParams = [
         'email' => [
             'name' => 'E-mail',
             'required' => true
         ],
-        'confirmCode' => [
+        'password' => [
             'name' => 'Пароль',
             'required' => true
         ]
@@ -40,29 +40,29 @@ class ConfirmRegistration extends Parameter
         $this->cleanParams['EMAIL'] = $email;
     }
 
-
-    protected function confirmCode(string $confirmCode): void
+    protected function password(string $password): void
     {
         // if (Validator::charset('UTF-8')->regex('/[!@#$%^&*()_.,0-9]/ium')->validate($password)) {
         //     $this->setError('fio', 'Неверный формат поля "Пароль"');
         // }
-        $this->cleanParams['CONFIRM_CODE'] = $confirmCode;
+        $this->cleanParams['PASSWORD'] = $password;
     }
+
 
     protected function successAction(): array
     {
         $reply = [];
+
         global $USER;
-        $userEmail = $this->cleanParams['EMAIL'];
-        $user = UserTable::query()->addFilter('=EMAIL', $userEmail)->fetch();
-        if ($user['CONFIRM_CODE'] === $this->cleanParams['CONFIRM_CODE']) {
-            $updateResult = $USER->Update($user['ID'], ['ACTIVE' => 'Y']);
-            if ($updateResult) {
-                $reply[] = 'Пользователь успешно активирован';
-            }
+        $user = new \CUser();
+        $user = $user->Login($this->cleanParams['EMAIL'], $this->cleanParams['PASSWORD']);
+        if (is_array($user)) {
+            $this->setError('user', 'Ошибка! Неверное имя пользователя или пароль. Проверьте правильность введенных данных.');
         } else {
-            $this->setError('confirmCode', 'Неверный CONFIRM_CODE');
+            $reply = [$user];
         }
-        return $reply;
+
+        return $reply
+        ;
     }
 }

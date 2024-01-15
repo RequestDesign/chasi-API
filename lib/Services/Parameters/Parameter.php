@@ -1,16 +1,18 @@
 <?php
 
-namespace Site\Api\Parameters;
+namespace Site\Api\Services\Parameters;
 
 use Bitrix\Main\Context;
 use Bitrix\Main\Error;
 use Bitrix\Main\ErrorCollection;
 
 /**
- * Класс для работы с параметрами
+ * Parameter
  *
  * @author work-aidsoul@outlook.com
- * https://github.com/aidsoul/bitrix-form
+ * @license MIT
+ *
+ * It is taken as a basis https://github.com/aidsoul/bitrix-form
  */
 abstract class Parameter
 {
@@ -54,9 +56,17 @@ abstract class Parameter
     /**
      * Параметры, которые принадлежат форме
      *
-     *  'fio' => [
-     * 'name' => 'ФИО',
-     * 'required' => true
+     * 'fio'        => [
+     * 'name'       => 'ФИО',
+     * 'required'   => true
+     * 'min'        => 1,
+     * 'max'        => 3,
+     * 'regular'    => [
+     *      'emailTest' =>  [
+     *       'rule'     => '/email@mail/s',
+     *        'message' => 'Не email@mail.ru'
+     *            ]
+     *       ]
      * ],
      * @var array
      */
@@ -138,6 +148,46 @@ abstract class Parameter
         return $this;
     }
 
+    /**
+     * Min/Max string validation function
+     *
+     * @param string|integer $str
+     * @param string $param
+     * @param integer|null $min
+     * @param integer|null $max
+     * @return void
+     */
+    private function strLengthValidation(string|int $str, string $param, int|null $min, int|null $max): void
+    {
+        $symbolsValue = mb_strlen($str, "UTF-8");
+        if ($min && $symbolsValue < $min) {
+            $this->setError($param . 'MinCharacters', 'The minimum number of characters for the field "' . $param . '" is' . $min);
+        }
+        if ($max && $symbolsValue > $max) {
+            $this->setError($param . 'MaxCharacters', 'The maximum number of characters for the field "' . $param . '" is' . $max);
+        }
+    }
+
+    /**
+     * Regular Validation
+     *
+     * @param array $regularArr
+     * @param string $value
+     * @param string $param
+     * @return void
+     */
+    private function regularValidation(array $regularArr, string $value, string $param): void
+    {
+        foreach ($regularArr as $k => $regular) {
+            if (!preg_match($regular['rule'], $value)) {
+                $message = $regular['message'];
+                if (!$message) {
+                    $message = 'The field "' . $param . '" does not match the template';
+                }
+                $this->setError($k, $message);
+            }
+        }
+    }
 
     /**
      * validateBaseParams function
@@ -157,12 +207,16 @@ abstract class Parameter
                     'В поле "' . $param . '" недопустимые символы!'
                 );
             } else {
-                $method = $param;
-                if ($currentParams['validateMethod']) {
-                    $method = $currentParams['validateMethod'];
-                }
-                if (method_exists($this, $method)) {
-                    $this->$method($value);
+                $this->strLengthValidation($value, $param, $currentParams['min'], $currentParams['max']);
+                $this->regularValidation($currentParams['regular'] ?? [], $value, $param);
+                if ($this->errorCollection->isEmpty()) {
+                    $method = $param;
+                    if ($currentParams['validateMethod']) {
+                        $method = $currentParams['validateMethod'];
+                    }
+                    if (method_exists($this, $method)) {
+                        $this->$method($value);
+                    }
                 }
             }
         }
@@ -286,19 +340,6 @@ abstract class Parameter
             $this->mail['mailTemplateId'],
             $this->mailAttachments
         );
-
-        // if (!empty($this->mail['email'])) {
-        //     global $USER;
-        //     if($USER->IsAdmin()){
-
-        //     }
-        //     $headers = implode("\r\n", [
-        //         'Content-Type: text/html; charset=utf-8',
-        //         'X-Mailer: PHP/' . PHP_VERSION
-        //     ]);
-            // mail('bitrix.site.test@gmail.com', $subject, $message, $headers);
-            // mail();
-        // }
     }
 
     /**

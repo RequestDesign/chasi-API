@@ -1,13 +1,12 @@
 <?php
 
-namespace Site\Api\Http\Controllers;
+namespace Site\Api\Controllers;
 
-use Bitrix\Main\Engine\ActionFilter;
+use Site\Api\Prefilters\Csrf;
 use Bitrix\Main\Engine\Controller;
-use Site\Api\Http\Prefilters\Csrf;
-use Site\Api\Parameters\SignupParameter;
-use Site\Api\Parameters\UserParameter;
+use Bitrix\Main\Engine\ActionFilter;
 use Site\Api\Traits\ControllerTrait;
+use Site\Api\Parameters\UserParameter;
 
 /**
  * UserController class

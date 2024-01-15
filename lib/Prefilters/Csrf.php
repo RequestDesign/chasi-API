@@ -1,6 +1,6 @@
 <?php
 
-namespace Site\Api\Http\Prefilters;
+namespace Site\Api\Prefilters;
 
 use Bitrix\Main\Error;
 use Bitrix\Main\Event;

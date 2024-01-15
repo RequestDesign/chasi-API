@@ -1,6 +1,6 @@
 <?php
 
-namespace Site\Api\Http\Controllers;
+namespace Site\Api\Controllers;
 
 use Bitrix\Main\Engine\Controller;
 

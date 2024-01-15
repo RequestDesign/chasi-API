@@ -1,8 +1,8 @@
 <?php
 
-namespace Site\Api\Traits;
+namespace Site\Api\Services\Traits;
 
-use Site\Api\Parameters\Parameter;
+use Site\Api\Services\Parameters\Parameter;
 
 trait ControllerTrait
 {
@@ -11,7 +11,7 @@ trait ControllerTrait
      * формы
      *
      * @param string $requestType get/post
-     * @param Parameter $form
+     * @param Parameter $parameter
      * @return array
      */
     private function getReplyAction(string $requestType = 'get', Parameter $parameter): array

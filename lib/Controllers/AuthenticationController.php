@@ -1,17 +1,16 @@
 <?php
 
-namespace Site\Api\Http\Controllers;
+namespace Site\Api\Controllers;
 
-use Bitrix\Rest\OAuth\Auth;
-use Bitrix\Main\Engine\Controller;
-use Site\Api\Http\Prefilters\Csrf;
 use Bitrix\Main\Engine\ActionFilter;
-use Site\Api\Http\Prefilters\ChangeKeyCase;
-use Site\Api\Parameters\ConfirmRegistration;
-use Site\Api\Traits\ControllerTrait;
-use Site\Api\Parameters\LoginParameter;
-use Site\Api\Parameters\RegistrationParameter;
-use Site\Api\Parameters\ForgetPasswordParameter;
+use Bitrix\Main\Engine\Controller;
+use Site\Api\Prefilters\ChangeKeyCase;
+use Site\Api\Prefilters\Csrf;
+use Site\Api\Services\Parameters\ConfirmRegistration;
+use Site\Api\Services\Parameters\ForgetPasswordParameter;
+use Site\Api\Services\Parameters\LoginParameter;
+use Site\Api\Services\Parameters\RegistrationParameter;
+use Site\Api\Services\Traits\ControllerTrait;
 
 /**
  * AuthenticationController

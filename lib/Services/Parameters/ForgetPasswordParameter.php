@@ -1,6 +1,6 @@
 <?php
 
-namespace Site\Api\Parameters;
+namespace Site\Api\Services\Parameters;
 
 use Bitrix\Main\UserTable;
 

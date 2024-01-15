@@ -3,9 +3,9 @@
 namespace Site\Api;
 
 use Bitrix\Main\Routing\RoutingConfigurator;
-use Site\Api\Http\Controllers\AuthenticationController;
-use Site\Api\Http\Controllers\CsrfTokenController;
-use Site\Api\Http\Controllers\UserController;
+use Site\Api\Controllers\AuthenticationController;
+use Site\Api\Controllers\CsrfTokenController;
+use Site\Api\Controllers\UserController;
 
 /**
  * Routes
@@ -22,8 +22,6 @@ class Routes
             $routes->post('confirm.registration', [AuthenticationController::class, 'confirmRegistrationAction']);
             $routes->post('forget.password', [AuthenticationController::class, 'forgetPasswordAction']);
             $routes->get('get.sessid', [CsrfTokenController::class, 'getCsrfAction']);
-
-            // $routes->put('user', [UserController::class, 'getAction']);
         });
     }
 }
