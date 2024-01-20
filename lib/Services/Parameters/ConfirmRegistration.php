@@ -1,22 +1,22 @@
 <?php
 
-namespace Site\Api\Parameters;
+namespace Site\Api\Services\Parameters;
 
 use Bitrix\Main\UserTable;
 
 /**
- * LoginParameter class
+ * ConfirmRegistration class
  *
  * @author AidSoul <work-aidsoul@outlook.com>
  */
-class LoginParameter extends Parameter
+class ConfirmRegistration extends Parameter
 {
     protected array $currentParams = [
         'email' => [
             'name' => 'E-mail',
             'required' => true
         ],
-        'password' => [
+        'confirmCode' => [
             'name' => 'Пароль',
             'required' => true
         ]
@@ -40,29 +40,29 @@ class LoginParameter extends Parameter
         $this->cleanParams['EMAIL'] = $email;
     }
 
-    protected function password(string $password): void
+
+    protected function confirmCode(string $confirmCode): void
     {
         // if (Validator::charset('UTF-8')->regex('/[!@#$%^&*()_.,0-9]/ium')->validate($password)) {
         //     $this->setError('fio', 'Неверный формат поля "Пароль"');
         // }
-        $this->cleanParams['PASSWORD'] = $password;
+        $this->cleanParams['CONFIRM_CODE'] = $confirmCode;
     }
-
 
     protected function successAction(): array
     {
         $reply = [];
-
         global $USER;
-        $user = new \CUser();
-        $user = $user->Login($this->cleanParams['EMAIL'], $this->cleanParams['PASSWORD']);
-        if (is_array($user)) {
-            $this->setError('user', 'Ошибка! Неверное имя пользователя или пароль. Проверьте правильность введенных данных.');
+        $userEmail = $this->cleanParams['EMAIL'];
+        $user = UserTable::query()->addFilter('=EMAIL', $userEmail)->fetch();
+        if ($user['CONFIRM_CODE'] === $this->cleanParams['CONFIRM_CODE']) {
+            $updateResult = $USER->Update($user['ID'], ['ACTIVE' => 'Y']);
+            if ($updateResult) {
+                $reply[] = 'Пользователь успешно активирован';
+            }
         } else {
-            $reply = [$user];
+            $this->setError('confirmCode', 'Неверный CONFIRM_CODE');
         }
-
-        return $reply
-        ;
+        return $reply;
     }
 }

@@ -1,17 +1,22 @@
 <?php
 
-namespace Site\Api\Parameters;
+namespace Site\Api\Services\Parameters;
 
 use Bitrix\Main\UserTable;
 use Bitrix\Main\Security\Random;
 
 /**
- * SignupParameter class
+ * RegistrationParameter class
  *
  * @author AidSoul <work-aidsoul@outlook.com>
  */
-class SignupParameter extends Parameter
+class RegistrationParameter extends Parameter
 {
+    protected array $email = [
+        'eventType' => 'NEW_USER_CONFIRM',
+        'mailTemplateId' => ''
+    ];
+
     protected array $currentParams = [
         'fio' => [
             'name' => 'ФИО',

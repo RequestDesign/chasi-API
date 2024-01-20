@@ -13,7 +13,7 @@ use Bitrix\Main\Error;
  * 
  * @author AidSoul <work-aidsoul@outlook.com>
  */
-class ApiKey extends Base
+final class ApiKey extends Base
 {
     public function onBeforeAction(Event $event)
     {
