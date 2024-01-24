@@ -50,6 +50,7 @@ final class Csrf extends Base
     {
         return [
             Controller::SCOPE_AJAX,
+            Controller::SCOPE_REST
         ];
     }
 
@@ -74,7 +75,7 @@ final class Csrf extends Base
                 self::ERROR_INVALID_CSRF,
                 $errorCustomData
             ));
-
+            http_response_code(400);
             return new EventResult(EventResult::ERROR, null, null, $this);
         }
 

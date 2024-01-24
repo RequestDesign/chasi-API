@@ -1,16 +1,15 @@
 <?php
-
 namespace Site\Api\Controllers;
 
+require_once($_SERVER["DOCUMENT_ROOT"].'/ajax/class/LoginEmailClass.php');
+
+use Bitrix\Main\Application;
 use Bitrix\Main\Engine\ActionFilter;
 use Bitrix\Main\Engine\Controller;
-use Site\Api\Prefilters\ChangeKeyCase;
+use Bitrix\Main\Error;
+use Site\Api\Postfilters\ChangeKeyCase;
 use Site\Api\Prefilters\Csrf;
-use Site\Api\Services\Parameters\ConfirmRegistration;
-use Site\Api\Services\Parameters\ForgetPasswordParameter;
-use Site\Api\Services\Parameters\LoginParameter;
-use Site\Api\Services\Parameters\RegistrationParameter;
-use Site\Api\Services\Traits\ControllerTrait;
+use Site\Api\Prefilters\Validator;
 
 /**
  * AuthenticationController
@@ -19,43 +18,29 @@ use Site\Api\Services\Traits\ControllerTrait;
  */
 class AuthenticationController extends Controller
 {
-    use ControllerTrait;
+    public const ERROR_ILLEGAL_LOGIN_OR_PASSWORD = 'illegal_login_or_password';
+    public const BAD_REQUEST = 'bad_request';
 
     public function configureActions(): array
     {
         return [
-            'registration' => [
-                'prefilters' => [
-                    new Csrf()
-                ],
-                'postfilters' => []
-            ],
             'login' => [
-                'prefilters' => [
-                    new Csrf()
-                ],
-                'postfilters' => []
+                '+prefilters' => [
+                    new Validator([
+                        (new \Site\Api\Services\Validator("email"))->email(),
+                        (new \Site\Api\Services\Validator("password"))->required()->minLength(8)
+                    ])
+                ]
             ],
             'logout' => [
-                'prefilters' => [
-                    new Csrf(),
+                '+prefilters' => [
                     new ActionFilter\Authentication()
                 ],
-                'postfilters' => []
             ],
             'forgetPassword' => [
-                'prefilters' => [
-                    new Csrf()
-                ],
                 'postfilters' => [
                     new ChangeKeyCase()
                 ]
-            ],
-            'confirmRegistration' => [
-                'prefilters' => [
-                    new Csrf()
-                ],
-                'postfilters' => []
             ]
         ];
     }
@@ -72,7 +57,7 @@ class AuthenticationController extends Controller
      */
     public function registrationAction()
     {
-        return $this->getReplyAction('post', new RegistrationParameter());
+        //return $this->getReplyAction('post', new RegistrationParameter());
     }
 
     /**
@@ -82,7 +67,43 @@ class AuthenticationController extends Controller
      */
     public function loginAction()
     {
-        return $this->getReplyAction('post', new LoginParameter());
+        $request = Application::getInstance()->getContext()->getRequest()->toArray();
+        $errors = [];
+        if(array_key_exists("email", $request)){
+            \LoginEmail::LoginEmailMethod($request["email"], $request["password"], $errors);
+            if(array_key_exists("IllegalLogin", $errors)){
+                $this->addError(new Error(
+                    "Неверный логин или пароль",
+                    self::ERROR_ILLEGAL_LOGIN_OR_PASSWORD
+                ));
+                http_response_code(400);
+            }
+            else{
+                http_response_code(204);
+            }
+            return null;
+        }
+        else if(array_key_exists("phone", $request)){
+            \LoginEmail::LoginEmailMethod($request["phone"], $request["password"], $errors);
+            if(array_key_exists("IllegalLogin", $errors)){
+                $this->addError(new Error(
+                    "Неверный логин или пароль",
+                    self::ERROR_ILLEGAL_LOGIN_OR_PASSWORD
+                ));
+                http_response_code(400);
+            }
+            else{
+                http_response_code(204);
+            }
+            return null;
+        }
+        $this->addError(new Error(
+            "Не указаны данные",
+            self::BAD_REQUEST
+        ));
+        http_response_code(400);
+        return null;
+        //return $this->getReplyAction('post', new LoginParameter());
     }
 
     /**
@@ -92,7 +113,7 @@ class AuthenticationController extends Controller
      */
     public function forgetPasswordAction()
     {
-        return $this->getReplyAction('post', new ForgetPasswordParameter());
+        //return $this->getReplyAction('post', new ForgetPasswordParameter());
     }
 
     /**
@@ -102,7 +123,7 @@ class AuthenticationController extends Controller
      */
     public function confirmRegistrationAction()
     {
-        return $this->getReplyAction('post', new ConfirmRegistration());
+        //return $this->getReplyAction('post', new ConfirmRegistration());
     }
 
     /**
@@ -112,7 +133,14 @@ class AuthenticationController extends Controller
      */
     public function logoutAction()
     {
-        global $USER;
-        return $USER->Logout();
+        //global $USER;
+        //return $USER->Logout();
+    }
+
+    public function getDefaultPreFilters()
+    {
+        return [
+            new Csrf()
+        ];
     }
 }
