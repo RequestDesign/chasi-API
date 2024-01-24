@@ -11,16 +11,6 @@ use Bitrix\Main\Engine\Controller;
  */
 class CsrfTokenController extends Controller
 {
-    public function configureActions(): array
-    {
-        return [
-            'getCsrf' => [
-                'prefilters' => [],
-                'postfilters' => []
-            ],
-        ];
-    }
-
     protected function prepareParams(): bool
     {
         return parent::prepareParams();
@@ -28,6 +18,11 @@ class CsrfTokenController extends Controller
 
     public function getCsrfAction()
     {
-        return bitrix_sessid();
+        return ["sessid" => bitrix_sessid()];
+    }
+
+    public function getDefaultPreFilters():array
+    {
+        return [];
     }
 }
