@@ -4,7 +4,6 @@ namespace Site\Api\Postfilters;
 
 use Bitrix\Main\Engine\ActionFilter\Base;
 use Bitrix\Main\Engine\Controller;
-use Bitrix\Main\Engine\Response\Converter;
 use Bitrix\Main\Event;
 
 class RecursiveResponseList extends Base

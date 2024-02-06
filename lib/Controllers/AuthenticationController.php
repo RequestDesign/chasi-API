@@ -76,7 +76,7 @@ class AuthenticationController extends Controller
                     "Неверный логин или пароль",
                     self::ERROR_ILLEGAL_LOGIN_OR_PASSWORD
                 ));
-                http_response_code(400);
+                http_response_code(403);
             }
             else{
                 http_response_code(204);

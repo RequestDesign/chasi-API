@@ -13,6 +13,9 @@ return [
         'value' => [
             'site.api.ad' => [
                 'className' => \Site\Api\Services\AdService::class
+            ],
+            'site.api.adv' => [
+                'className' => \Site\Api\Services\AdvService::class
             ]
         ],
         'readonly' => true

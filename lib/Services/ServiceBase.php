@@ -3,8 +3,14 @@
 namespace Site\Api\Services;
 
 use Bitrix\Main\Application;
+use Bitrix\Main\ArgumentException;
+use Bitrix\Main\Context;
 use Bitrix\Main\Engine\Response\Converter;
+use Bitrix\Main\FileTable;
+use Bitrix\Main\ORM\Fields\ExpressionField;
+use Bitrix\Main\ORM\Query\Filter\ConditionTree;
 use Bitrix\Main\ORM\Query\Result;
+use Bitrix\Main\Web\Json;
 use Site\Api\Entity\UserFieldEnumTable;
 use Site\Api\Enum\FieldType;
 use Bitrix\Main\Loader;
@@ -14,6 +20,8 @@ Loader::includeModule('highloadblock');
 
 use Bitrix\Iblock\Iblock;
 use Bitrix\Highloadblock\HighloadBlockTable;
+use Site\Api\Enum\FilterType;
+use Site\Api\Exceptions\FilterException;
 
 class ServiceBase
 {
@@ -21,16 +29,24 @@ class ServiceBase
     private const SORT_DIRECTIONS = ["ASC", "DESC"];
     protected array $select = [];
     protected array $sort = [];
-    private int $limit = 0;
-    private int $page = 1;
+    protected int $limit = 16;
+    protected int $page = 1;
+    protected array $filter = [];
+    protected array $navData = [];
+    private array $queryParams = [];
     /**
      * @var array
      */
     public array $request;
+    /**
+     * @var Application
+     */
+    public Application $app;
 
     public function __construct()
     {
-        $this->request = Application::getInstance()->getContext()->getRequest()->toArray();
+        $this->app = Application::getInstance();
+        $this->request = $this->app->getContext()->getRequest()->toArray();
     }
 
     final function select():ServiceBase
@@ -59,6 +75,7 @@ class ServiceBase
     {
         $sort = [];
         $self = get_called_class();
+        $sortConventer = new Converter(Converter::TO_SNAKE|Converter::TO_UPPER);
         if(array_key_exists('sort', $this->request)){
             $sortParams = explode(',', $this->request['sort']);
             if(is_array($sortParams) && count($sortParams)){
@@ -80,7 +97,7 @@ class ServiceBase
                 if(array_key_exists("field", $self::FIELDS[$sort_field])){
                     $this->sort[$self::FIELDS[$sort_field]['field']] = $direction;
                 }
-                else $this->sort[strtoupper($sort_field)] = $direction;
+                else $this->sort[$sortConventer->process($sort_field)] = $direction;
             }
         }
         return $this;
@@ -101,11 +118,91 @@ class ServiceBase
         return $this;
     }
 
+    final function filter():ServiceBase
+    {
+        $filter = [];
+        $self = get_called_class();
+        $converter = new Converter(Converter::TO_SNAKE|Converter::TO_LOWER);
+        $rangeSigns = ["<", ">", "<=", ">="];
+
+        if(array_key_exists('filter', $this->request) && !empty($this->request['filter'])){
+            try{
+                $filter_raw = Json::decode($this->request["filter"]);
+            }
+            catch (ArgumentException $e){
+                throw new FilterException("Не удалось декодировать json строку");
+            }
+            if(!is_array($filter_raw)){
+                throw new FilterException("Параметр filter должен быть объектом");
+            }
+            foreach ($filter_raw as $key => $filter_value){
+                $matches = [];
+                $op = null;
+                if(preg_match('/^([<>]=?)([a-zA-Z]+)$/', $key, $matches)){
+                    $key = $matches[2];
+                    $op = $matches[1];
+                }
+                $filter_key = $converter->process($key);
+
+                if(!array_key_exists($filter_key, $self::FIELDS)){
+                    throw new FilterException("Параметр ".$key." не существует");
+                }
+                switch($self::FIELDS[$filter_key]["filter_type"]){
+                    case FilterType::ARRAY:{
+                        if(!is_array($filter_value)){
+                            throw new FilterException("Тип параметра ".$key." должен быть array");
+                        }
+                        if(empty($filter_value)){
+                            throw new FilterException("Параметр ".$key." не должен быть пустым");
+                        }
+                        if($op){
+                            throw new FilterException("Параметр ".$key." не должен содержать знак ".$op);
+                        }
+                        $filter[] = [
+                            $filter_key, "in", $filter_value
+                        ];
+                        break;
+                    }
+                    case FilterType::RANGE_INT:{
+                        if(!is_int($filter_value)){
+                            throw new FilterException("Тип параметра ".$key." должен быть int");
+                        }
+                        if(!in_array($op, $rangeSigns)){
+                            throw new FilterException("Параметр ".$key." должен содержать знаки <, >, <= или >=");
+                        }
+                        $filter[] = [
+                            $filter_key, $op, $filter_value
+                        ];
+                        break;
+                    }
+                    case FilterType::RANGE_FLOAT:{
+                        if(!is_int($filter_value) && !is_float($filter_value)){
+                            throw new FilterException("Тип параметра ".$key." должен быть float");
+                        }
+                        if(!in_array($op, $rangeSigns)){
+                            throw new FilterException("Параметр ".$key." должен содержать знаки <, >, <= или >=");
+                        }
+                        $filter[] = [
+                            $filter_key, $op, $filter_value
+                        ];
+                        break;
+                    }
+                    default:
+                        throw new \Exception('Unexpected value');
+                }
+            }
+        }
+        $this->filter = $filter;
+        return $this;
+    }
+
     final function getQueryParams():array
     {
-        $this->select()->sort()->paginate();
-        $queryParams = [];
-        $queryParams["select"] = [];
+        $self = get_called_class();
+        $upperConverter = new Converter(Converter::TO_UPPER);
+        $this->select()->filter()->sort()->paginate();
+        $this->queryParams = [];
+        $this->queryParams["select"] = [];
         foreach ($this->select as $alias => $selectField){
             if(array_key_exists("type", $selectField)){
                 switch ($selectField["type"]){
@@ -114,16 +211,16 @@ class ServiceBase
                             array_key_exists("ref_field", $selectField) &&
                             array_key_exists("fields", $selectField) &&
                             array_key_exists("field", $selectField)){
-                            if(!array_key_exists("runtime", $queryParams)) $queryParams["runtime"] = [];
+                            if(!array_key_exists("runtime", $this->queryParams)) $this->queryParams["runtime"] = [];
                             foreach($selectField["fields"] as $field_alias => $field){
                                 if(is_int($field_alias)){
-                                    $queryParams["select"][$alias."|".$field] = $alias.".".$field;
+                                    $this->queryParams["select"][$alias."|".$field] = $alias.".".$field;
                                 }
                                 else{
-                                    $queryParams["select"][$alias."|".$field_alias] = $alias.".".$field;
+                                    $this->queryParams["select"][$alias."|".$field_alias] = $alias.".".$field;
                                 }
                             }
-                            $queryParams["runtime"][$alias] = [
+                            $this->queryParams["runtime"][$alias] = [
                                 'data_type' => Iblock::wakeUp($selectField["ref_id"])->getEntityDataClass(),
                                 'reference' => [
                                     '=this.'.$selectField["field"] => 'ref.'.$selectField["ref_field"]
@@ -138,16 +235,16 @@ class ServiceBase
                             array_key_exists("ref_field", $selectField) &&
                             array_key_exists("fields", $selectField) &&
                             array_key_exists("field", $selectField)){
-                            if(!array_key_exists("runtime", $queryParams)) $queryParams["runtime"] = [];
+                            if(!array_key_exists("runtime", $this->queryParams)) $this->queryParams["runtime"] = [];
                             foreach($selectField["fields"] as $field_alias => $field){
                                 if(is_int($field_alias)){
-                                    $queryParams["select"][$alias."|".$field] = $alias.".".$field;
+                                    $this->queryParams["select"][$alias."|".$field] = $alias.".".$field;
                                 }
                                 else{
-                                    $queryParams["select"][$alias."|".$field_alias] = $alias.".".$field;
+                                    $this->queryParams["select"][$alias."|".$field_alias] = $alias.".".$field;
                                 }
                             }
-                            $queryParams["runtime"][$alias] = [
+                            $this->queryParams["runtime"][$alias] = [
                                 'data_type' => HighloadBlockTable::compileEntity(HighloadBlockTable::getById($selectField["ref_id"])->fetch())->getDataClass(),
                                 'reference' => [
                                     '=this.'.$selectField["field"] => 'ref.'.$selectField["ref_field"]
@@ -159,9 +256,9 @@ class ServiceBase
                     }
                     case FieldType::ULIST:{
                         if(array_key_exists("field", $selectField)){
-                            if(!array_key_exists("runtime", $queryParams)) $queryParams["runtime"] = [];
-                            $queryParams["select"][$alias] = $selectField["field"]."_ALIAS.VALUE";
-                            $queryParams["runtime"][$selectField["field"]."_ALIAS"] = [
+                            if(!array_key_exists("runtime", $this->queryParams)) $this->queryParams["runtime"] = [];
+                            $this->queryParams["select"][$alias] = $selectField["field"]."_ALIAS.VALUE";
+                            $this->queryParams["runtime"][$selectField["field"]."_ALIAS"] = [
                                 'data_type' => UserFieldEnumTable::class,
                                 'reference' => [
                                     '=this.'.$selectField["field"] => 'ref.ID'
@@ -171,50 +268,113 @@ class ServiceBase
                         }
                         break;
                     }
+                    case FieldType::PHOTO:{
+                        if(array_key_exists("field", $selectField)){
+                            if(!array_key_exists("runtime", $this->queryParams)) $this->queryParams["runtime"] = [];
+                            $this->queryParams["select"][] = $alias;
+                            $this->queryParams["runtime"]["PICTURE_ALIAS"] = [
+                                'data_type' => FileTable::class,
+                                'reference' => [
+                                    '=this.'.$selectField["field"] => 'ref.ID'
+                                ],
+                                ['join_type' => 'left']
+                            ];
+                            $this->queryParams["runtime"][] = new ExpressionField($alias, 'CONCAT("'.(Context::getCurrent()->getRequest()->isHttps()?"https://":"http://").Context::getCurrent()->getServer()->getHttpHost().'/upload/", %s, "/", %s)', ["PICTURE_ALIAS.SUBDIR", "PICTURE_ALIAS.FILE_NAME"]);
+                        }
+                        break;
+                    }
                     default: {
                         if(array_key_exists("field", $selectField)){
-                            $queryParams["select"][$alias] = $selectField["field"];
+                            $this->queryParams["select"][$alias] = $selectField["field"];
                         }
-                        else $queryParams["select"][] = $alias;
+                        else $this->queryParams["select"][] = $alias;
                         break;
                     }
                 }
             }
         }
+        if(!empty($this->filter)){
+            foreach ($this->filter as &$filter_el){
+                $field_data = $self::FIELDS[$filter_el[0]];
+                switch($field_data["type"]){
+                    case FieldType::IB_EL:{
+                        if(array_key_exists("field", $field_data) &&
+                            array_key_exists("filter_name", $field_data) &&
+                            array_key_exists("ref_id", $field_data) &&
+                            array_key_exists("ref_field", $field_data)){
+                            if(!array_key_exists($filter_el[0], $this->select)){
+                                if(!array_key_exists("runtime", $this->queryParams)) $this->queryParams["runtime"] = [];
+                                $this->queryParams["runtime"][$filter_el[0]] = [
+                                    'data_type' => Iblock::wakeUp($field_data["ref_id"])->getEntityDataClass(),
+                                    'reference' => [
+                                        '=this.'.$field_data["field"] => 'ref.'.$field_data["ref_field"]
+                                    ],
+                                    ['join_type' => 'left']
+                                ];
+                            }
+                            $filter_el[0] = $filter_el[0].'.'.$field_data["filter_name"];
+                        }
+                        break;
+                    }
+                    case FieldType::ULIST:{
+                        if(array_key_exists("field", $field_data)){
+                            $filter_el[0] = $field_data["field"];
+                        }
+                    }
+                    default:{
+                        if(array_key_exists("field", $field_data)){
+                            $filter_el[0] = $field_data["field"];
+                        }
+                        else {
+                            $filter_el[0] = $upperConverter->process($filter_el[0]);
+                        }
+                        break;
+                    }
+                }
+            }
+            $this->queryParams["filter"] = ConditionTree::createFromArray($this->filter);
+        }
         if(count($this->sort)){
-            $queryParams["order"] = $this->sort;
+            $this->queryParams["order"] = $this->sort;
         }
         if($this->limit > 0){
-            $queryParams["limit"] = $this->limit;
-            $queryParams["offset"] = ($this->page - 1) * $this->limit;
+            $this->queryParams["limit"] = $this->limit;
+            $this->queryParams["offset"] = ($this->page - 1) * $this->limit;
         }
-        $queryParams["count_total"] = true;
+        $this->queryParams["count_total"] = true;
 
-        $this->addAdditionalParams($queryParams);
+        $this->addAdditionalParams($this->queryParams);
 
-        return $queryParams;
+        return $this->queryParams;
     }
 
     protected function addAdditionalParams(&$queryParams):void
     {}
 
-    protected function addPaginationParams(array &$elements, Result &$dbElements):void
+    protected function addPaginationParams(Result &$dbElements):void
     {
-        $elements["total"] = count($elements)?$dbElements->getCount():0;
+        $navData = [
+            "total" => $dbElements->getCount()
+        ];
         if($this->limit > 0){
-            $elements["limit"] = $this->limit;
-            $elements["page"] = $this->page;
-            $elements["first_page"] = 1;
-            $elements["last_page"] = ceil($elements["total"]/$elements["limit"]);
-            if($this->page > 1 && $this->page <= $elements["last_page"]){
-                $elements["prev_page"] = $this->page - 1;
+            $navData["limit"] = $this->limit;
+            $navData["page"] = $this->page;
+            $navData["first_page"] = 1;
+            $navData["last_page"] = ceil($navData["total"]/$navData["limit"]);
+            if($this->page > 1 && $this->page <= $navData["last_page"]){
+                $navData["prev_page"] = $this->page - 1;
             }
-            else if($this->page > $elements["last_page"]){
-                $elements["prev_page"] = $elements["last_page"];
+            else if($this->page > $navData["last_page"]){
+                $navData["prev_page"] = $navData["last_page"];
             }
-            if($this->page < $elements["last_page"]){
-                $elements["next_page"] = $this->page + 1;
+            if($this->page < $navData["last_page"]){
+                $navData["next_page"] = $this->page + 1;
             }
         }
+        $this->navData = $navData;
+    }
+
+    public function getNavigationData():array{
+        return $this->navData;
     }
 }

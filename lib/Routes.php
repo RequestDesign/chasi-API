@@ -4,6 +4,7 @@ namespace Site\Api;
 
 use Bitrix\Main\Routing\RoutingConfigurator;
 use Site\Api\Controllers\AdController;
+use Site\Api\Controllers\AdvController;
 use Site\Api\Controllers\AuthenticationController;
 use Site\Api\Controllers\BrandController;
 use Site\Api\Controllers\CsrfTokenController;
@@ -25,11 +26,16 @@ class Routes
             $routes->post('login', [AuthenticationController::class, 'login']);
 
             // бренды
-            $routes->get('brand', [BrandController::class, 'getList']);
+            $routes->get('brands', [BrandController::class, 'getList']);
 
             // объявления
 
-            $routes->get('ad', [AdController::class, 'getList']);
+            $routes->get('ads', [AdController::class, 'getList']);
+            $routes->get('filter', [AdController::class, 'getFilter']);
+
+            // рекламы
+
+            $routes->get('advs', [AdvController::class, 'getList']);
             //$routes->post('registration', [AuthenticationController::class, 'registrationAction']);
             //$routes->post('login', [AuthenticationController::class, 'loginAction']);
             //$routes->get('logout', [AuthenticationController::class, 'logoutAction']);

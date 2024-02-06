@@ -7,4 +7,6 @@ class FieldType{
     public const IB_EL = 1;
     public const HLBL_EL = 2;
     public const ULIST = 3;
+
+    public const PHOTO = 4;
 };
