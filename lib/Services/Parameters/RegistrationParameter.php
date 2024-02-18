@@ -78,7 +78,7 @@ class RegistrationParameter extends Parameter
 
     protected function password(string $password): void
     {
-        // if (Validator::charset('UTF-8')->regex('/[!@#$%^&*()_.,0-9]/ium')->validate($password)) {
+        // if (Validation::charset('UTF-8')->regex('/[!@#$%^&*()_.,0-9]/ium')->validate($password)) {
         //     $this->setError('fio', 'Неверный формат поля "Пароль"');
         // }
         $this->cleanParams['PASSWORD'] = $password;

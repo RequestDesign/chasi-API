@@ -2,7 +2,7 @@
 
 namespace Site\Api\Services;
 
-class Validator
+class Validation
 {
     /**
      * @var string
@@ -15,7 +15,7 @@ class Validator
     protected array $validate_params = array();
 
     /**
-     * Validator constructor.
+     * Validation constructor.
      *
      * @param string $field
      */
@@ -27,9 +27,9 @@ class Validator
     /**
      * Делает параметр обязательным
      *
-     * @return Validator
+     * @return Validation
      */
-    public function required():Validator
+    public function required():Validation
     {
         $this->validate_params["required"] = true;
         return $this;
@@ -39,9 +39,9 @@ class Validator
      * Задает регулярное выражение для параметра
      *
      * @param string $regex
-     * @return Validator
+     * @return Validation
      */
-    public function regex(string $regex):Validator
+    public function regex(string $regex):Validation
     {
         $this->validate_params["regex"] = $regex;
         return $this;
@@ -51,9 +51,9 @@ class Validator
      * Задает минимальное значение для параметра
      *
      * @param int $min
-     * @return Validator
+     * @return Validation
      */
-    public function min(int $min):Validator
+    public function min(int $min):Validation
     {
         $this->validate_params["min"] = $min;
         return $this;
@@ -63,9 +63,9 @@ class Validator
      * Задает максимальное значение для параметра
      *
      * @param int $max
-     * @return Validator
+     * @return Validation
      */
-    public function max(int $max):Validator
+    public function max(int $max):Validation
     {
         $this->validate_params["max"] = $max;
         return $this;
@@ -75,9 +75,9 @@ class Validator
      * Задает минимальное количество символов для параметра
      *
      * @param int $min
-     * @return Validator
+     * @return Validation
      */
-    public function minLength(int $min):Validator
+    public function minLength(int $min):Validation
     {
         $this->validate_params["minLength"] = $min;
         return $this;
@@ -87,10 +87,10 @@ class Validator
      * Задает максимальное количество символов для параметра
      *
      * @param int $max
-     * @return Validator
+     * @return Validation
      */
 
-    public function maxLength(int $max):Validator
+    public function maxLength(int $max):Validation
     {
         $this->validate_params["maxLength"] = $max;
         return $this;
@@ -99,11 +99,49 @@ class Validator
     /**
      * Задает проверку почты для параметра
      *
-     * @return Validator
+     * @return Validation
      */
-    public function email():Validator
+    public function email():Validation
     {
         $this->validate_params["email"] = true;
+        return $this;
+    }
+
+    public function password():Validation
+    {
+        $this->validate_params["password"] = true;
+        return $this;
+    }
+    
+    public function number():Validation
+    {
+        $this->validate_params["number"] = true;
+        return $this;
+    }
+
+    //megabytes
+    public function image($max_size):Validation
+    {
+        $this->validate_params["image"] = $max_size;
+        return $this;
+    }
+
+    //работает только для изображений
+    public function maxCount($count):Validation
+    {
+        $this->validate_params["maxCount"] = $count;
+        return $this;
+    }
+
+    public function price():Validation
+    {
+        $this->validate_params["price"] = true;
+        return $this;
+    }
+
+    public function bool():Validation
+    {
+        $this->validate_params["bool"] = true;
         return $this;
     }
 

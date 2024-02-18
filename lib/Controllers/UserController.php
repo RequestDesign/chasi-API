@@ -2,41 +2,61 @@
 
 namespace Site\Api\Controllers;
 
+use Bitrix\Main\DI\ServiceLocator;
+use Bitrix\Main\Error;
+use Bitrix\Main\EventResult;
+use Site\Api\Exceptions\RegisterException;
 use Site\Api\Prefilters\Csrf;
 use Bitrix\Main\Engine\Controller;
-use Bitrix\Main\Engine\ActionFilter;
-use Site\Api\Traits\ControllerTrait;
-use Site\Api\Parameters\UserParameter;
+use Site\Api\Prefilters\Validator;
+use Site\Api\Services\Validation;
 
 /**
  * UserController class
  *
- * @author AidSoul <work-aidsoul@outlook.com>
  */
 class UserController extends Controller
 {
-    use ControllerTrait;
 
-    public function configureActions(): array
+    protected function getDefaultPreFilters():array
     {
         return [
-            'get' => [
-                'prefilters' => [
-                    new Csrf(),
-                    new ActionFilter\Authentication()
-                ],
-                'postfilters' => []
-            ],
+            new Csrf()
         ];
     }
 
-    protected function prepareParams(): bool
+    public function configureActions():array
     {
-        return parent::prepareParams();
+        return [
+            "create" => [
+                "+prefilters" => [
+                    new Validator([
+                        (new Validation("email"))->email()->required(),
+                        (new Validation("name"))->maxLength(255)->required(),
+                        (new Validation("lastName"))->maxLength(255)->required(),
+                        (new Validation("city"))->maxLength(255)->required(),
+                        (new Validation("phone"))->maxLength(20)->number(),
+                        (new Validation("password"))->required()->password(),
+                        (new Validation("confirmPassword"))->required()->password(),
+                    ])
+                ]
+            ]
+        ];
     }
 
-    public function getAction()
+    public function createAction():array|EventResult
     {
-        return $this->getReplyAction('post', new UserParameter());
+        $serviceLocator = ServiceLocator::getInstance();
+        $userService = $serviceLocator->get("site.api.user");
+        try{
+            $id = $userService->register();
+            http_response_code(201);
+            return ["id" => $id];
+        }
+        catch (RegisterException $e){
+            $this->addError(new Error($e->getMessage(), $e->getExceptionCode()));
+            http_response_code(400);
+            return new EventResult(EventResult::ERROR, null, null, $this);
+        }
     }
 }

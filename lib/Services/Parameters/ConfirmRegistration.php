@@ -43,7 +43,7 @@ class ConfirmRegistration extends Parameter
 
     protected function confirmCode(string $confirmCode): void
     {
-        // if (Validator::charset('UTF-8')->regex('/[!@#$%^&*()_.,0-9]/ium')->validate($password)) {
+        // if (Validation::charset('UTF-8')->regex('/[!@#$%^&*()_.,0-9]/ium')->validate($password)) {
         //     $this->setError('fio', 'Неверный формат поля "Пароль"');
         // }
         $this->cleanParams['CONFIRM_CODE'] = $confirmCode;

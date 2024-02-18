@@ -9,4 +9,5 @@ class FieldType{
     public const ULIST = 3;
 
     public const PHOTO = 4;
+    public const BOOL = 5;
 };

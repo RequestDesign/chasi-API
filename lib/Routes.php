@@ -16,28 +16,35 @@ use Site\Api\Controllers\UserController;
  */
 class Routes
 {
+    //size
     public static function getRoutes(RoutingConfigurator $routes): void
     {
         $routes->prefix('api')->group(function (RoutingConfigurator $routes) {
             // CSRF
             $routes->get('csrf', [CsrfTokenController::class, 'getCsrf']);
 
-            // login
+            // auth
             $routes->post('login', [AuthenticationController::class, 'login']);
+            $routes->post('logout', [AuthenticationController::class, 'logout']);
+            $routes->post('confirm-register', [AuthenticationController::class, 'confirmRegistration']);
+            $routes->post('confirm-code', [AuthenticationController::class, 'sendConfirmCode']);
+
+            // user
+            $routes->post('register', [UserController::class, 'create']);
 
             // бренды
             $routes->get('brands', [BrandController::class, 'getList']);
 
             // объявления
-
             $routes->get('ads', [AdController::class, 'getList']);
+            $routes->post('ads', [AdController::class, 'create']);
+            $routes->get('ads-create-values', [AdController::class, 'getCreateValues']);
             $routes->get('filter', [AdController::class, 'getFilter']);
 
             // рекламы
 
             $routes->get('advs', [AdvController::class, 'getList']);
             //$routes->post('registration', [AuthenticationController::class, 'registrationAction']);
-            //$routes->post('login', [AuthenticationController::class, 'loginAction']);
             //$routes->get('logout', [AuthenticationController::class, 'logoutAction']);
             //$routes->post('confirm.registration', [AuthenticationController::class, 'confirmRegistrationAction']);
             //$routes->post('forget.password', [AuthenticationController::class, 'forgetPasswordAction']);

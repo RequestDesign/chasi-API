@@ -10,7 +10,9 @@ use Bitrix\Main\FileTable;
 use Bitrix\Main\ORM\Fields\ExpressionField;
 use Bitrix\Main\ORM\Query\Filter\ConditionTree;
 use Bitrix\Main\ORM\Query\Result;
+use Bitrix\Main\UserFieldTable;
 use Bitrix\Main\Web\Json;
+use Bitrix\Translate\Controller\Editor\SaveFile;
 use Site\Api\Entity\UserFieldEnumTable;
 use Site\Api\Enum\FieldType;
 use Bitrix\Main\Loader;
@@ -21,6 +23,7 @@ Loader::includeModule('highloadblock');
 use Bitrix\Iblock\Iblock;
 use Bitrix\Highloadblock\HighloadBlockTable;
 use Site\Api\Enum\FilterType;
+use Site\Api\Exceptions\CreateException;
 use Site\Api\Exceptions\FilterException;
 
 class ServiceBase
@@ -42,11 +45,13 @@ class ServiceBase
      * @var Application
      */
     public Application $app;
+    public array $files;
 
     public function __construct()
     {
         $this->app = Application::getInstance();
         $this->request = $this->app->getContext()->getRequest()->toArray();
+        $this->files = $this->app->getContext()->getRequest()->getFileList()->toArray();
     }
 
     final function select():ServiceBase
@@ -269,7 +274,7 @@ class ServiceBase
                         break;
                     }
                     case FieldType::PHOTO:{
-                        if(array_key_exists("field", $selectField)){
+                        /*if(array_key_exists("field", $selectField)){
                             if(!array_key_exists("runtime", $this->queryParams)) $this->queryParams["runtime"] = [];
                             $this->queryParams["select"][] = $alias;
                             $this->queryParams["runtime"]["PICTURE_ALIAS"] = [
@@ -281,7 +286,7 @@ class ServiceBase
                             ];
                             $this->queryParams["runtime"][] = new ExpressionField($alias, 'CONCAT("'.(Context::getCurrent()->getRequest()->isHttps()?"https://":"http://").Context::getCurrent()->getServer()->getHttpHost().'/upload/", %s, "/", %s)', ["PICTURE_ALIAS.SUBDIR", "PICTURE_ALIAS.FILE_NAME"]);
                         }
-                        break;
+                        break;*/
                     }
                     default: {
                         if(array_key_exists("field", $selectField)){
@@ -376,5 +381,94 @@ class ServiceBase
 
     public function getNavigationData():array{
         return $this->navData;
+    }
+
+    final function getCreateData():array
+    {
+        $create = [];
+        $self = get_called_class();
+        $converter = new Converter(Converter::TO_SNAKE|Converter::TO_LOWER);
+        foreach($this->request as $key => $value){
+            $convertKey = $converter->process($key);
+            $field = $self::FIELDS[$convertKey];
+            if(isset($field["createable"]) && $field["createable"]) {
+                switch($self::FIELDS[$convertKey]["type"]){
+                    case FieldType::IB_EL:{
+                        $res = Iblock::wakeUp($field["ref_id"])->getEntityDataClass()::getById($value);
+                        if(!($el = $res->fetch())){
+                            throw new CreateException(message: "Не существует элемента с переданным id", field:$key);
+                        }
+                        $create[$field["field"]] = $value;
+                        break;
+                    }
+                    case FieldType::SCALAR:{
+                        $create[$field["field"]] = $value;
+                        break;
+                    }
+                    case FieldType::ULIST:{
+                        $res = UserFieldEnumTable::getList([
+                            "select" => ["ID"],
+                            "filter" => ["ID" => $value, "USER_FIELD.FIELD_NAME" => $field["field"]],
+                            "runtime" => [
+                                "USER_FIELD" => [
+                                    "data_type" => UserFieldTable::class,
+                                    "reference" => [
+                                        "=this.USER_FIELD_ID" => "ref.ID"
+                                    ],
+                                    ["join_type"=>"left"]
+                                ]
+                            ]
+                        ]);
+                        if (!$res->fetch()){
+                            throw new CreateException(message: "Не существует элемента с переданным id", field:$key);
+                        }
+                        $create[$field["field"]] = $value;
+                        break;
+                    }
+                    case FieldType::BOOL:{
+                        $create[$field["field"]] = $value === '1'?1:0;
+                    }
+                }
+            }
+        }
+        foreach($this->files as $key => $files){
+            $convertKey = $converter->process($key);
+            $field = $self::FIELDS[$convertKey];
+            if(isset($field["createable"]) && $field["createable"]) {
+                switch($self::FIELDS[$convertKey]["type"]){
+                    case FieldType::PHOTO:{
+                        $ids = [];
+                        $files = $this->reArrayFiles($files);
+                        foreach($files as &$file){
+                            $imageinfo = getimagesize($file["tmp_name"]);
+                            $file["type"] = $imageinfo["mime"];
+                            $id = \CFile::SaveFile($file, 'uf');
+                            if($id) {
+                                $ids[] = \CFile::MakeFileArray($id);
+                            }
+                        }
+                        $create[$field["field"]] = $ids;
+                        break;
+                    }
+                }
+            }
+        }
+        return $create;
+    }
+
+    protected function reArrayFiles(&$file_post){
+        $isMulti = is_array($file_post['name']);
+        $file_count = $isMulti?count($file_post['name']):1;
+        $file_keys = array_keys($file_post);
+
+        $file_ary = [];    //Итоговый массив
+        for($i=0; $i<$file_count; $i++)
+            foreach($file_keys as $key)
+                if($isMulti)
+                    $file_ary[$i][$key] = $file_post[$key][$i];
+                else
+                    $file_ary[$i][$key]    = $file_post[$key];
+
+        return $file_ary;
     }
 }

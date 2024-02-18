@@ -16,6 +16,9 @@ return [
             ],
             'site.api.adv' => [
                 'className' => \Site\Api\Services\AdvService::class
+            ],
+            'site.api.user' => [
+                'className' => \Site\Api\Services\UserService::class
             ]
         ],
         'readonly' => true
