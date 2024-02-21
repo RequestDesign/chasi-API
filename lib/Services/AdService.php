@@ -2,8 +2,6 @@
 
 namespace Site\Api\Services;
 
-require_once($_SERVER["DOCUMENT_ROOT"]."/local/composer/src/HighloadBlock/WatchHighLoadBlock.php");
-
 use Bitrix\Iblock\Iblock;
 use Bitrix\Main\Context;
 use Bitrix\Main\FileTable;

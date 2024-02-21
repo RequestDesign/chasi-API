@@ -33,9 +33,7 @@ class UserController extends Controller
                     new Validator([
                         (new Validation("email"))->email()->required(),
                         (new Validation("name"))->maxLength(255)->required(),
-                        (new Validation("lastName"))->maxLength(255)->required(),
                         (new Validation("city"))->maxLength(255)->required(),
-                        (new Validation("phone"))->maxLength(20)->number(),
                         (new Validation("password"))->required()->password(),
                         (new Validation("confirmPassword"))->required()->password(),
                     ])

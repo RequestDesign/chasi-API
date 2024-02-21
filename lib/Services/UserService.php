@@ -45,7 +45,7 @@ class UserService
             $exception->setExceptionCode(RegisterException::PASSWORD_EXCEPTION_CODE);
             throw $exception;
         }
-        $id = RegEmail3Class::RegEmail3Method($this->request["email"], $this->request["password"], $this->request["name"], $this->request["lastName"], $this->request["city"], $this->request["phone"] ?? "", $errors);
+        $id = RegEmail3Class::RegEmail3Method($this->request["email"], $this->request["password"], $this->request["name"], $this->request["city"], $errors);
         if(!$id) {
             $exception = new RegisterException("Внутренняя ошибка регистрации");
             $exception->setExceptionCode(RegisterException::USER_CREATION_EXCEPTION_CODE);
