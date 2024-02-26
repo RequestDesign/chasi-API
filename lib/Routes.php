@@ -28,9 +28,13 @@ class Routes
             $routes->post('logout', [AuthenticationController::class, 'logout']);
             $routes->post('confirm-register', [AuthenticationController::class, 'confirmRegistration']);
             $routes->post('confirm-code', [AuthenticationController::class, 'sendConfirmCode']);
+            $routes->post('forgot', [AuthenticationController::class, 'forgot']);
+            $routes->post('confirm-forgot-code', [AuthenticationController::class, 'confirmForgot']);
+            $routes->post('change-password', [AuthenticationController::class, 'changePassword']);
 
             // user
             $routes->post('register', [UserController::class, 'create']);
+            $routes->get('users/{id}', [UserController::class, 'getOne']);
 
             // бренды
             $routes->get('brands', [BrandController::class, 'getList']);

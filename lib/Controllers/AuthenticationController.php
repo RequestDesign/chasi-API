@@ -3,6 +3,9 @@ namespace Site\Api\Controllers;
 
 require_once($_SERVER["DOCUMENT_ROOT"].'/ajax/class/LoginEmailClass.php');
 require_once($_SERVER["DOCUMENT_ROOT"].'/ajax/class/RegEmail4Class.php');
+require_once($_SERVER["DOCUMENT_ROOT"].'/ajax/class/ForgotPassEmail1Class.php');
+require_once($_SERVER["DOCUMENT_ROOT"].'/ajax/class/ForgotPassEmail2Class.php');
+require_once($_SERVER["DOCUMENT_ROOT"].'/ajax/class/ForgotPassEmail3Class.php');
 
 use Bitrix\Main\EventResult;
 use Bitrix\Main\Application;
@@ -14,6 +17,9 @@ use Site\Api\Prefilters\Csrf;
 use Site\Api\Prefilters\Validator;
 use RegEmail4Class;
 use Site\Api\Services\Validation;
+use ForgotPassEmail1Class;
+use ForgotPassEmail2Class;
+use ForgotPassEmail3Class;
 
 /**
  * AuthenticationController
@@ -53,9 +59,22 @@ class AuthenticationController extends Controller
                     ])
                 ]
             ],
-            'forgetPassword' => [
+            'forgot' => [
+                '+prefilters' => [
+                    new Validator([
+                        (new Validation('email'))->required()->email()
+                    ])
+                ],
                 'postfilters' => [
                     new ChangeKeyCase()
+                ]
+            ],
+            'confirmForgot' => [
+                '+prefilters' => [
+                    new Validator([
+                        (new Validation('id'))->required()->number(),
+                        (new Validation('code'))->required()
+                    ])
                 ]
             ],
             'sendConfirmCode' => [
@@ -64,23 +83,17 @@ class AuthenticationController extends Controller
                         (new Validation('id'))->number()
                     ])
                 ]
+            ],
+            'changePassword' => [
+                '+prefilters' => [
+                    new Validator([
+                        (new Validation('id'))->required()->number(),
+                        (new Validation('password'))->required()->password(),
+                        (new Validation('confirmPassword'))->required()
+                    ])
+                ]
             ]
         ];
-    }
-
-    protected function prepareParams(): bool
-    {
-        return parent::prepareParams();
-    }
-
-    /**
-     * Registration
-     *
-     * @return void
-     */
-    public function registrationAction()
-    {
-        //return $this->getReplyAction('post', new RegistrationParameter());
     }
 
     /**
@@ -126,7 +139,6 @@ class AuthenticationController extends Controller
         ));
         http_response_code(400);
         return null;
-        //return $this->getReplyAction('post', new LoginParameter());
     }
 
     /**
@@ -134,9 +146,82 @@ class AuthenticationController extends Controller
      *
      * @return void
      */
-    public function forgetPasswordAction()
+    public function forgotAction():array|EventResult
     {
-        //return $this->getReplyAction('post', new ForgetPasswordParameter());
+        $request = $this->getRequest()->toArray();
+        $errors = [];
+        $id = ForgotPassEmail1Class::ForgotPassEmail1Method($request["email"], $errors);
+        if(!$id){
+            $this->addError(new Error(
+                "Пользователь не существует",
+                "user_not_found"
+            ));
+            http_response_code(404);
+            return new EventResult(EventResult::ERROR, null, 'site.api', $this);
+        }
+        return ["id"=>$id];
+    }
+
+    public function confirmForgotAction():null|EventResult
+    {
+        $request = $this->getRequest()->toArray();
+        $errors = [];
+        $res = ForgotPassEmail2Class::ForgotPassEmail2Method($request["id"], $request["code"], $errors);
+        if(!$res){
+            foreach($errors as $error_key=>$error_message){
+                switch($error_key){
+                    case 'resetPasswordCode':{
+                        $this->addError(new Error(
+                            "Неверный код подтверждения",
+                            "illegal_code"
+                        ));
+                        http_response_code(404);
+                        return new EventResult(EventResult::ERROR, null, 'site.api', $this);
+                        break;
+                    }
+                    case 'existUser':{
+                        $this->addError(new Error(
+                            "Пользователь не существует",
+                            "user_not_found"
+                        ));
+                        http_response_code(404);
+                        return new EventResult(EventResult::ERROR, null, 'site.api', $this);
+                        break;
+                    }
+                }
+            }
+        }
+        http_response_code(204);
+        return null;
+    }
+
+    public function changePasswordAction(){
+        $request = $this->getRequest()->toArray();
+        $errors = [];
+        $res = ForgotPassEmail3Class::ForgotPassEmail3Method($request["id"], $request["password"], $request["confirmPassword"], $errors);
+        if($res){
+            foreach ($errors as $error_key => $error_message){
+                switch ($error_key){
+                    case 'CONFIRM_CODE':{
+                        $this->addError(new Error("Неверный код подтверждения", "incorrect_code"));
+                        http_response_code(400);
+                        return new EventResult(EventResult::ERROR, null, 'site.api', $this);
+                    }
+                    case 'passConfirm':{
+                        $this->addError(new Error("Пароли не сопадают", "incorrect_confirm_password"));
+                        http_response_code(400);
+                        return new EventResult(EventResult::ERROR, null, 'site.api', $this);
+                    }
+                    case 'repeatNewPasswordInput':{
+                        $this->addError(new Error("Некорректный пароль", "incorrect_password"));
+                        http_response_code(400);
+                        return new EventResult(EventResult::ERROR, null, 'site.api', $this);
+                    }
+                }
+            }
+        }
+        http_response_code(204);
+        return null;
     }
 
     /**
