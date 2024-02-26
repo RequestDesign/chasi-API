@@ -78,6 +78,7 @@ class UserController extends Controller
         $user = UserTable::getByPrimary($request["id"],
             ["select" => ['id', 'EMAIL', 'ACTIVE', 'NAME', 'phone'=>'PERSONAL_PHONE', 'city'=>'PERSONAL_CITY']])->fetch();
         if($user){
+            $user["ACTIVE"] = $user["ACTIVE"] === "Y"?1:0;
             return $user;
         }
         else{
