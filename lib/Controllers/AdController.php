@@ -77,6 +77,25 @@ class AdController extends Controller
         return $adService->getCreateValues();
     }
 
+    public function getOneAction(): array|EventResult
+    {
+        $request = $this->getRequest()->toArray();
+        $serviceLocator = ServiceLocator::getInstance();
+        $adService = $serviceLocator->get("site.api.ad");
+        $el = $adService->getOne();
+        if($el){
+            return $el;
+        }
+        else{
+            $this->addError(new Error(
+                "Запрашиваемый ресурс не существует",
+                "ad_not_exist"
+            ));
+            http_response_code(404);
+            return new EventResult(EventResult::ERROR, null, "site.api", $this);
+        }
+    }
+
     protected function getDefaultPreFilters():array
     {
         return [
@@ -134,6 +153,17 @@ class AdController extends Controller
                         (new Validation("promotion"))->required()->bool(),
                         (new Validation("promotionType"))->number()
                     ])
+                ]
+            ],
+            "getOne" => [
+                "+prefilters" => [
+                    new Validator([
+                        (new Validation("id"))->required()->number()
+                    ])
+                ],
+                "postfilters" => [
+                    new RecursiveResponseList(),
+                    new ChangeKeyCase()
                 ]
             ]
         ];

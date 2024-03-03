@@ -44,6 +44,7 @@ class Routes
             $routes->post('ads', [AdController::class, 'create']);
             $routes->get('ads-create-values', [AdController::class, 'getCreateValues']);
             $routes->get('filter', [AdController::class, 'getFilter']);
+            $routes->get('ads/{id}', [AdController::class, 'getOne']);
 
             // рекламы
 

@@ -366,4 +366,168 @@ class AdService extends ServiceBase
         }
         return $filter;
     }
+
+    public function getOne(){
+        $id = $this->request["id"];
+        $hlblock = HL\HighloadBlockTable::getById(self::AD_HL_ID)->fetch();
+        $entity = HL\HighloadBlockTable::compileEntity($hlblock);
+        $entity_data_class = $entity->getDataClass();
+
+        $el = $entity_data_class::getByPrimary($id, [
+            "select" => [
+                "ID", 'photo'=>"UF_FOTO", "brand"=>"brand_alias.NAME", "brand_id"=>"brand_alias.ID",
+                "model"=>"UF_MODEL", "year"=>"UF_GOD", "price"=>"UF_PRICE", "condition"=>"condition_alias.VALUE",
+                "gender"=>"gender_alias.VALUE", "mechanism"=>"mechanism_alias.VALUE", "mechanism_id"=>"mechanism_alias.ID",
+                "frame_color"=>"color_alias.NAME", "country"=>"country_alias.NAME",
+                "material"=>"material_alias.VALUE", "form"=>"form_alias.VALUE", "size"=>"size_alias.VALUE",
+                "watchband"=>"watchband_alias.VALUE", "clasp"=>"clasp_alias.VALUE",
+                "dial"=>"dial_alias.VALUE", "dial_color"=>"dial_color_alias.NAME",
+                "water_protection"=>"water_protection_alias.VALUE", "description"=>"UF_DESC",
+                "date_created"=>"UF_CREATE_DATE", "seller_type"=>"seller_type_alias.VALUE",
+                "user|id"=>"user_alias.ID", "user|name"=>"user_alias.NAME",
+                "user|city"=>"user_alias.PERSONAL_CITY", ],
+            "runtime" => [
+                "brand_alias" => [
+                    "data_type" => Iblock::wakeUp(1)->getEntityDataClass(),
+                    "reference" => [
+                        "=this.UF_BRAND" => "ref.ID"
+                    ],
+                    ["join_type"=>"left"]
+                ],
+                "condition_alias" => [
+                    "data_type" => UserFieldEnumTable::class,
+                    "reference" => [
+                        "=this.UF_SOST" => "ref.ID",
+                    ],
+                    ["join_type"=>"left"]
+                ],
+                "gender_alias" => [
+                    "data_type" => UserFieldEnumTable::class,
+                    "reference" => [
+                        "=this.UF_POL" => "ref.ID",
+                    ],
+                    ["join_type"=>"left"]
+                ],
+                "mechanism_alias" => [
+                    "data_type" => UserFieldEnumTable::class,
+                    "reference" => [
+                        "=this.UF_MEXANIZM" => "ref.ID",
+                    ],
+                    ["join_type"=>"left"]
+                ],
+                "color_alias" => [
+                    "data_type" => Iblock::wakeUp(2)->getEntityDataClass(),
+                    "reference" => [
+                        "=this.UF_COLOR" => "ref.ID"
+                    ],
+                    ["join_type"=>"left"]
+                ],
+                "country_alias" => [
+                    "data_type" => Iblock::wakeUp(3)->getEntityDataClass(),
+                    "reference" => [
+                        "=this.UF_COUNTRY" => "ref.ID"
+                    ],
+                    ["join_type"=>"left"]
+                ],
+                "material_alias" => [
+                    "data_type" => UserFieldEnumTable::class,
+                    "reference" => [
+                        "=this.UF_MATERIAL" => "ref.ID",
+                    ],
+                    ["join_type"=>"left"]
+                ],
+                "form_alias" => [
+                    "data_type" => UserFieldEnumTable::class,
+                    "reference" => [
+                        "=this.UF_FORMA" => "ref.ID",
+                    ],
+                    ["join_type"=>"left"]
+                ],
+                "size_alias" => [
+                    "data_type" => UserFieldEnumTable::class,
+                    "reference" => [
+                        "=this.UF_RAZMER" => "ref.ID",
+                    ],
+                    ["join_type"=>"left"]
+                ],
+                "watchband_alias" => [
+                    "data_type" => UserFieldEnumTable::class,
+                    "reference" => [
+                        "=this.UF_REMEN" => "ref.ID",
+                    ],
+                    ["join_type"=>"left"]
+                ],
+                "clasp_alias" => [
+                    "data_type" => UserFieldEnumTable::class,
+                    "reference" => [
+                        "=this.UF_ZASTEZHKA" => "ref.ID",
+                    ],
+                    ["join_type"=>"left"]
+                ],
+                "dial_alias" => [
+                    "data_type" => UserFieldEnumTable::class,
+                    "reference" => [
+                        "=this.UF_CIFERBLAT" => "ref.ID",
+                    ],
+                    ["join_type"=>"left"]
+                ],
+                "dial_color_alias" => [
+                    "data_type" => Iblock::wakeUp(2)->getEntityDataClass(),
+                    "reference" => [
+                        "=this.UF_COLOR_CIFER" => "ref.ID"
+                    ],
+                    ["join_type"=>"left"]
+                ],
+                "water_protection_alias" => [
+                    "data_type" => UserFieldEnumTable::class,
+                    "reference" => [
+                        "=this.UF_VODO" => "ref.ID",
+                    ],
+                    ["join_type"=>"left"]
+                ],
+                "seller_type_alias" => [
+                    "data_type" => UserFieldEnumTable::class,
+                    "reference" => [
+                        "=this.UF_PRODAVEC" => "ref.ID",
+                    ],
+                    ["join_type"=>"left"]
+                ],
+                "user_alias" => [
+                    "data_type" => UserTable::class,
+                    "reference" => [
+                        "=this.UF_USER_ID"=>"ref.ID"
+                    ],
+                    ["join_type"=>"left"]
+                ]
+            ]
+        ])->fetch();
+        if(!$el) return null;
+        if(count($el['photo'])){
+            $serverHost = (Context::getCurrent()->getRequest()->isHttps()?"https://":"http://").Context::getCurrent()->getServer()->getHttpHost();
+            $files = FileTable::getList([
+                "select"=>["ID","FULL_PATH"],
+                "filter"=>["=ID"=>$el["photo"]],
+                "runtime"=>[
+                    new ExpressionField('FULL_PATH', 'CONCAT("'.$serverHost.'/upload/", %s, "/", %s)', ["SUBDIR", "FILE_NAME"])
+                ]
+            ])->fetchAll();
+            $el['photo'] = array_map(function($el){
+                    return $el["FULL_PATH"];
+                }, $files);
+        }
+        $el["user|adv_count"] = $entity_data_class::getList([
+            'runtime' => [
+                new ExpressionField('CNT', 'COUNT(*)'),
+            ],
+            "select" => ["CNT"],
+            "filter" => ["=UF_USER_ID" => $el["user|id"]]
+        ])->fetch()["CNT"];
+        $moreEls = $entity_data_class::getList([
+            "select" => ["ID"],
+            "filter" => ["=UF_BRAND"=>$el["brand_id"], "=UF_MEXANIZM"=>$el["mechanism_id"]]
+        ])->fetchAll();
+        $el["more"] = array_column($moreEls, "ID");
+        unset($el["brand_id"], $el["mechanism_id"]);
+        return $el;
+    }
 }

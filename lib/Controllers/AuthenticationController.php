@@ -113,11 +113,9 @@ class AuthenticationController extends Controller
                     self::ERROR_ILLEGAL_LOGIN_OR_PASSWORD
                 ));
                 http_response_code(403);
+                return new EventResult(EventResult::ERROR, null, 'site.api', $this);
             }
-            else{
-                http_response_code(204);
-            }
-            return null;
+            return [];
         }
         else if(array_key_exists("phone", $request)){
             \LoginEmail::LoginEmailMethod($request["phone"], $request["password"], $errors);
@@ -127,11 +125,9 @@ class AuthenticationController extends Controller
                     self::ERROR_ILLEGAL_LOGIN_OR_PASSWORD
                 ));
                 http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, 'site.api', $this);
             }
-            else{
-                http_response_code(204);
-            }
-            return null;
+            return [];
         }
         $this->addError(new Error(
             "Не указаны данные",
@@ -191,8 +187,7 @@ class AuthenticationController extends Controller
                 }
             }
         }
-        http_response_code(204);
-        return null;
+        return [];
     }
 
     public function changePasswordAction(){
@@ -220,8 +215,7 @@ class AuthenticationController extends Controller
                 }
             }
         }
-        http_response_code(204);
-        return null;
+        return [];
     }
 
     /**
@@ -255,7 +249,7 @@ class AuthenticationController extends Controller
             http_response_code(400);
             return new EventResult(EventResult::ERROR, null, null, $this);
         }
-        http_response_code(204);
+        return [];
     }
 
     public function sendConfirmCodeAction(){
@@ -268,7 +262,7 @@ class AuthenticationController extends Controller
 
             // Отправка шаблона письма - Подтверждение регистрации нового пользователя [NEW_USER_CONFIRM]
             \CEvent::Send("NEW_USER_CONFIRM", "s1", array("EMAIL" => $user["EMAIL"], "ID" => $user["ID"], "CONFIRM_CODE" => $confirmationCode));
-            http_response_code(204);
+            return [];
         }
         $this->addError(new Error(
             "Пользователь не существует",
@@ -287,7 +281,7 @@ class AuthenticationController extends Controller
     {
         global $USER;
         $USER->Logout();
-        http_response_code(204);
+        return [];
     }
 
     public function getDefaultPreFilters()
