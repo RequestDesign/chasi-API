@@ -106,8 +106,8 @@ class AuthenticationController extends Controller
         $request = Application::getInstance()->getContext()->getRequest()->toArray();
         $errors = [];
         if(array_key_exists("email", $request)){
-            \LoginEmail::LoginEmailMethod($request["email"], $request["password"], $errors);
-            if(array_key_exists("IllegalLogin", $errors)){
+            $res = \LoginEmail::LoginEmailMethod($request["email"], $request["password"], $errors);
+            if(array_key_exists("IllegalLogin", $errors) || $res !== true){
                 $this->addError(new Error(
                     "Неверный логин или пароль",
                     self::ERROR_ILLEGAL_LOGIN_OR_PASSWORD
@@ -115,7 +115,7 @@ class AuthenticationController extends Controller
                 http_response_code(403);
                 return new EventResult(EventResult::ERROR, null, 'site.api', $this);
             }
-            return [];
+            return ["id"=>$this->getCurrentUser()->getId()];
         }
         else if(array_key_exists("phone", $request)){
             \LoginEmail::LoginEmailMethod($request["phone"], $request["password"], $errors);
