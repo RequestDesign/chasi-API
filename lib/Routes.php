@@ -35,6 +35,8 @@ class Routes
             // user
             $routes->post('register', [UserController::class, 'create']);
             $routes->get('users/{id}', [UserController::class, 'getOne']);
+            $routes->delete('users', [UserController::class, 'delete']);
+            $routes->patch('users/{id}', [UserController::class, 'edit']);
 
             // бренды
             $routes->get('brands', [BrandController::class, 'getList']);

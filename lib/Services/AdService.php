@@ -2,13 +2,19 @@
 
 namespace Site\Api\Services;
 
+require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/SearchDataClass.php");
+
 use Bitrix\Iblock\Iblock;
+use Bitrix\Main\Application;
 use Bitrix\Main\Context;
 use Bitrix\Main\FileTable;
 use Bitrix\Main\Loader;
 use Bitrix\Main\UserFieldTable;
 use Bitrix\Main\UserTable;
 use Lib\HighloadBlock\WatchHighloadBlock;
+use \SearchDataClass;
+
+
 
 Loader::includeModule('highloadblock');
 Loader::includeModule('iblock');
@@ -200,11 +206,22 @@ class AdService extends ServiceBase
      */
     public function getList():array
     {
+        $request = Application::getInstance()->getContext()->getRequest()->toArray();
         $queryParams = $this->getQueryParams();
         $hlblock = HL\HighloadBlockTable::getById(self::AD_HL_ID)->fetch();
         $entity = HL\HighloadBlockTable::compileEntity($hlblock);
         $entity_data_class = $entity->getDataClass();
-
+        if(isset($request["q"]) && $request["q"]){
+            $searchFilter = [];
+            $searchRuntime = [];
+            SearchDataClass::GetSearchClassData($request["q"], $searchFilter, $searchRuntime);
+            $arFilter = $queryParams["filter"] ?? [];
+            $arRuntime = $queryParams["runtime"] ?? [];
+            $arFilter = array_merge($arFilter, $searchFilter);
+            $arRuntime = array_merge($arRuntime, $searchRuntime);
+            $queryParams["filter"] = $arFilter;
+            $queryParams["runtime"] = $arRuntime;
+        }
         $dbElements = $entity_data_class::getList($queryParams);
         $elements = $dbElements->fetchAll();
         if(count($elements) && array_key_exists('photo', $elements[0])){

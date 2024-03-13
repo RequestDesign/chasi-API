@@ -158,7 +158,7 @@ class AuthenticationController extends Controller
         return ["id"=>$id];
     }
 
-    public function confirmForgotAction():null|EventResult
+    public function confirmForgotAction():array|EventResult
     {
         $request = $this->getRequest()->toArray();
         $errors = [];
@@ -194,7 +194,7 @@ class AuthenticationController extends Controller
         $request = $this->getRequest()->toArray();
         $errors = [];
         $res = ForgotPassEmail3Class::ForgotPassEmail3Method($request["id"], $request["password"], $request["confirmPassword"], $errors);
-        if($res){
+        if(!$res){
             foreach ($errors as $error_key => $error_message){
                 switch ($error_key){
                     case 'CONFIRM_CODE':{
