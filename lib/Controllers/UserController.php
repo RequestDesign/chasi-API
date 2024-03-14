@@ -2,10 +2,10 @@
 
 namespace Site\Api\Controllers;
 
-require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/DeleteAccClass.php");
-require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/EditAvatarClass.php");
-require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/EditDataClass.php");
-require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/EditPassClass.php");
+include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/DeleteAccClass.php");
+include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/EditAvatarClass.php");
+include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/EditDataClass.php");
+include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/EditPassClass.php");
 
 use Bitrix\Main\Context;
 use Bitrix\Main\DI\ServiceLocator;
