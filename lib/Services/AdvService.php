@@ -26,23 +26,28 @@ try {
 }
 
 use Bitrix\Iblock\Iblock;
+use Site\Api\Enum\ModelRules;
 
 class AdvService extends ServiceBase
 {
     protected const FIELDS = [
         'id' => array(
-            "type" => FieldType::SCALAR
+            "type" => FieldType::SCALAR,
+            "rule" => ModelRules::READ,
         ),
         'name' => array(
-            'type' => FieldType::SCALAR
+            'type' => FieldType::SCALAR,
+            "rule" => ModelRules::READ
         ),
         'photo' => array(
             'field' => 'PREVIEW_PICTURE',
-            'type' => FieldType::PHOTO
+            'type' => FieldType::PHOTO,
+            "rule" => ModelRules::READ
         ),
         'desc' => array(
             'field' => 'description.VALUE',
-            'type' => FieldType::SCALAR
+            'type' => FieldType::SCALAR,
+            "rule" => ModelRules::READ
         )
     ];
 

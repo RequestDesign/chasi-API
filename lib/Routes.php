@@ -37,6 +37,7 @@ class Routes
             $routes->get('users/{id}', [UserController::class, 'getOne']);
             $routes->delete('users', [UserController::class, 'delete']);
             $routes->patch('users/{id}', [UserController::class, 'edit']);
+            $routes->get('user', [UserController::class, 'getCurrentUser']);
 
             // бренды
             $routes->get('brands', [BrandController::class, 'getList']);
@@ -44,9 +45,11 @@ class Routes
             // объявления
             $routes->get('ads', [AdController::class, 'getList']);
             $routes->post('ads', [AdController::class, 'create']);
+            $routes->post('ads/draft', [AdController::class, 'createDraft']);
             $routes->get('ads-create-values', [AdController::class, 'getCreateValues']);
             $routes->get('filter', [AdController::class, 'getFilter']);
             $routes->get('ads/{id}', [AdController::class, 'getOne']);
+            $routes->put('ads/{id}', [AdController::class, 'edit']);
 
             // рекламы
 

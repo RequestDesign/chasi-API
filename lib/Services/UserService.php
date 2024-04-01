@@ -5,6 +5,10 @@ require_once($_SERVER['DOCUMENT_ROOT']."/ajax/class/RegEmail2Class.php");
 require_once($_SERVER['DOCUMENT_ROOT']."/ajax/class/RegEmail3Class.php");
 
 use Bitrix\Main\Application;
+use Bitrix\Main\Context;
+use Bitrix\Main\FileTable;
+use Bitrix\Main\ORM\Fields\ExpressionField;
+use Bitrix\Main\UserTable;
 use RegEmailClass;
 use RegEmail2Class;
 use RegEmail3Class;
@@ -52,5 +56,38 @@ class UserService
             throw $exception;
         }
         return $id;
+    }
+
+    public function getOne($id)
+    {
+        $serverHost = (Context::getCurrent()->getRequest()->isHttps()?"https://":"http://").Context::getCurrent()->getServer()->getHttpHost();
+        $user = UserTable::getByPrimary($id,
+            [
+                "select" => [
+                    'id',
+                    'EMAIL',
+                    'ACTIVE',
+                    'NAME',
+                    'LAST_NAME',
+                    'phone'=>'PERSONAL_PHONE',
+                    'city'=>'PERSONAL_CITY',
+                    "photo" => "FULL_PATH",
+                    "birthday" => "PERSONAL_BIRTHDAY",
+                    "gender" => "PERSONAL_GENDER"
+                ],
+                "runtime" => [
+                    "photo_alias" => [
+                        "data_type" => FileTable::class,
+                        "reference" => [
+                            "=this.PERSONAL_PHOTO" => "ref.ID"
+                        ],
+                        ["join_type" => "left"]
+                    ],
+                    new ExpressionField('FULL_PATH', 'CONCAT("'.$serverHost.'/upload/", %s, "/", %s)', ["photo_alias.SUBDIR", "photo_alias.FILE_NAME"])
+                ]
+            ]
+        )->fetch();
+
+        return $user;
     }
 }

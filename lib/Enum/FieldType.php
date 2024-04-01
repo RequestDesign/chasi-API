@@ -10,4 +10,6 @@ class FieldType{
 
     public const PHOTO = 4;
     public const BOOL = 5;
+
+    public const USER = 6;
 };

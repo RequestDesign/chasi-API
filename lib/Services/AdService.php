@@ -25,16 +25,24 @@ use Bitrix\Main\SystemException;
 use Site\Api\Entity\UserFieldEnumTable;
 use Site\Api\Enum\FieldType;
 use Site\Api\Enum\FilterType;
+use Site\Api\Enum\ModelRules;
+use Site\Api\Exceptions\CreateException;
+use Site\Api\Exceptions\EditException;
 use Site\Api\Exceptions\FilterException;
 
 
 class AdService extends ServiceBase
 {
-
     private const AD_HL_ID = 1;
+    public const POSTED = 44;
+    public const MOVING = 45;
+    public const MODERATED = 46;
+    public const UNPAYED = 43;
+    public const DRAFT = 40;
     protected const FIELDS = [
         "id" => array(
-            "type"=> FieldType::SCALAR
+            "type"=> FieldType::SCALAR,
+            "rule"=> ModelRules::READ
         ),
         "brand" => array(
             "field"=>"UF_BRAND",
@@ -44,36 +52,36 @@ class AdService extends ServiceBase
             "fields" => ["ID", "NAME", "CODE"],
             "filter_type" => FilterType::ARRAY,
             "filter_name" => "ID",
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "model" => array(
             "field"=>"UF_MODEL",
             "type"=> FieldType::SCALAR,
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "condition" => array(
             "field"=>"UF_SOST",
             "type"=>FieldType::ULIST,
             "filter_type" => FilterType::ARRAY,
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "gender" => array(
             "field"=>"UF_POL",
             "type"=>FieldType::ULIST,
             "filter_type" => FilterType::ARRAY,
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "year" => array(
             "field"=>"UF_GOD",
             "type"=>FieldType::SCALAR,
             "filter_type" => FilterType::RANGE_INT,
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "mechanism" => array(
             "field"=>"UF_MEXANIZM",
             "type"=>FieldType::ULIST,
             "filter_type" => FilterType::ARRAY,
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "frame_color" => array(
             "field"=>"UF_COLOR",
@@ -83,7 +91,7 @@ class AdService extends ServiceBase
             "fields" => ["ID","NAME", "COLOR"=>"HEX.VALUE"],
             "filter_type" => FilterType::ARRAY,
             "filter_name" => "ID",
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "dial_color" => array(
             "field"=>"UF_COLOR_CIFER",
@@ -93,7 +101,7 @@ class AdService extends ServiceBase
             "fields" => ["ID","NAME", "COLOR"=>"HEX.VALUE"],
             "filter_type" => FilterType::ARRAY,
             "filter_name" => "ID",
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "country" => array(
             "field" => "UF_COUNTRY",
@@ -103,85 +111,87 @@ class AdService extends ServiceBase
             "fields" => ["ID", "NAME"],
             "filter_type" => FilterType::ARRAY,
             "filter_name" => "ID",
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "seller_type" => array(
             "field" => "UF_PRODAVEC",
             "type" => FieldType::ULIST,
             "filter_type" => FilterType::ARRAY,
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "material" => array(
             "field" => "UF_MATERIAL",
             "type" => FieldType::ULIST,
             "filter_type" => FilterType::ARRAY,
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "form" => array(
             "field" => "UF_FORMA",
             "type" => FieldType::ULIST,
             "filter_type" => FilterType::ARRAY,
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "size" => array(
             "field" => "UF_RAZMER",
             "type" => FieldType::ULIST,
             "filter_type" => FilterType::ARRAY,
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "watchband" => array(
             "field" => "UF_REMEN",
             "type" => FieldType::ULIST,
             "filter_type" => FilterType::ARRAY,
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "clasp" => array(
             "field" => "UF_ZASTEZHKA",
             "type" => FieldType::ULIST,
             "filter_type" => FilterType::ARRAY,
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "dial" => array(
             "field" => "UF_CIFERBLAT",
             "type" => FieldType::ULIST,
             "filter_type" => FilterType::ARRAY,
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "water_protection" => array(
             "field" => "UF_VODO",
             "type" => FieldType::ULIST,
             "filter_type" => FilterType::ARRAY,
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "description" => array(
             "field" => "UF_DESC",
             "type" => FieldType::SCALAR,
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "price" => array(
             "field" => "UF_PRICE",
             "type" => FieldType::SCALAR,
             "filter_type" => FilterType::RANGE_FLOAT,
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "photo" => array(
             "field" => "UF_FOTO",
             "type" => FieldType::PHOTO,
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "city" => array(
             "field" => "UF_TOWN",
             "type" => FieldType::SCALAR,
-            "filter_type" => FilterType::ARRAY
+            "filter_type" => FilterType::ARRAY,
+            "rule" => ModelRules::READ
         ),
-        "user_id" => array(
+        "user" => array(
             "field" => "UF_USER_ID",
-            "type" => FieldType::SCALAR
+            "type" => FieldType::USER,
+            "rule" => ModelRules::READ
         ),
         "promotion" => array(
             "field" => "UF_PROMOT",
             "type" => FieldType::BOOL,
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "promotion_type" => array(
             "field" => "UF_PROMOTION",
@@ -189,16 +199,37 @@ class AdService extends ServiceBase
             "ref_id" => 6,
             "ref_field" => "ID",
             "fields" => ["ID", "NAME"],
-            "createable" => true
+            "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "status" => array(
             "field" => "UF_STATUS",
-            "type" => FieldType::ULIST
+            "type" => FieldType::ULIST,
+            "rule" => ModelRules::READ
         ),
         "date_created" => array(
             "field" => "UF_CREATE_DATE",
-            "type" => FieldType::SCALAR
-        )
+            "type" => FieldType::SCALAR,
+            "rule" => ModelRules::READ
+        ),
+        "documents_list" => array(
+            "field" => "UF_AVAILABILITY_OF_DOCUMENTS",
+            "type" => FieldType::IB_EL,
+            "ref_id" => 9,
+            "ref_field" => "ID",
+            "fields" => ["ID", "NAME"],
+            "filter_type" => FilterType::ARRAY,
+            "rule" => ModelRules::CREATE
+        ),
+        "documents_description" => array(
+            "field" => "UF_AVAILABILITY_OF_DOCUMENTS_TXT",
+            "type" => FieldType::SCALAR,
+            "rule" => ModelRules::CREATE
+        ),
+        "video" => array(
+            "field" => "UF_VIDEO",
+            "type" => FieldType::SCALAR,
+            "rule" => ModelRules::CREATE | ModelRules::READ
+        ),
     ];
 
     /**
@@ -222,6 +253,7 @@ class AdService extends ServiceBase
             $queryParams["filter"] = $arFilter;
             $queryParams["runtime"] = $arRuntime;
         }
+        $queryParams["filter"]["=UF_STATUS"] = [self::POSTED, self::MOVING];
         $dbElements = $entity_data_class::getList($queryParams);
         $elements = $dbElements->fetchAll();
         if(count($elements) && array_key_exists('photo', $elements[0])){
@@ -251,11 +283,16 @@ class AdService extends ServiceBase
         return $elements;
     }
 
-    public function create():\Bitrix\Main\Entity\AddResult
+    public function create($params = []):\Bitrix\Main\Entity\AddResult
     {
         global $USER;
         $createData = $this->getCreateData();
-        //убрать при модерации
+        $createData["UF_STATUS"] = isset($createData["UF_PROMOT"]) ?
+                                        $createData["UF_PROMOT"]        ?
+                                            self::UNPAYED               :
+                                            self::MODERATED        :
+                                        self::MODERATED;
+        $createData = array_merge($createData, $params);
         $createData["UF_ACTIVE"] = "Y";
         $city = UserTable::getById($USER->GetID())->fetch()["PERSONAL_CITY"];
         $createData["UF_TOWN"] = $city;
@@ -263,10 +300,122 @@ class AdService extends ServiceBase
         return $wh->create($createData);
     }
 
+    public function edit():\Bitrix\Main\Entity\UpdateResult
+    {
+        global $USER;
+        $createData = $this->getCreateData();
+        $hlblock = HL\HighloadBlockTable::getById(self::AD_HL_ID)->fetch();
+        $entity = HL\HighloadBlockTable::compileEntity($hlblock);
+        $entity_data_class = $entity->getDataClass();
+        $el = $entity_data_class::getByPrimary($this->request['id'], [
+            "select" => ["status"=>"status_alias.VALUE"],
+            "runtime" => [
+                "status_alias" => [
+                    "data_type" => UserFieldEnumTable::class,
+                    "reference" => [
+                        "=this.UF_STATUS" => "ref.ID",
+                    ],
+                    ["join_type"=>"left"]
+                ]
+            ]
+        ])->fetch();
+        if(!$el){
+            throw new EditException(message: "Не существует элемента с переданным id");
+        }
+        if(in_array($el["status"], [self::POSTED, self::MOVING])){
+            $createData["UF_STATUS"] = self::MODERATED;
+        }
+        $createData["UF_ACTIVE"] = "Y";
+        $wh = new WatchHighloadBlock();
+        return $wh->update($this->request["id"], $createData);
+    }
+
     public function getCreateValues(){
         $createValues = [];
-        foreach(self::FIELDS as $alias => $field){
-            if(array_key_exists("createable", $field) && $field["createable"]){
+        $createValues["brand"] = [];
+        $brands = Iblock::wakeUp(self::FIELDS["brand"]["ref_id"])->getEntityDataClass()::getList([
+           "select" => self::FIELDS["brand"]["fields"],
+           "order" => ["ID"=>"ASC"]
+        ])->fetchCollection();
+        foreach ($brands as $brand){
+            $createValues["brand"][] = [
+                "id" => $brand->getId(),
+                "name" => $brand->getName(),
+                "code" => $brand->getCode()
+            ];
+        }
+        $createValues["condition"] = self::getPropsList("condition");
+        $createValues["gender"] = self::getPropsList("gender");
+        $createValues["mechanism"] = self::getPropsList("mechanism");
+
+        $createValues["frame_color"] = [];
+        $frameColors = Iblock::wakeUp(self::FIELDS["frame_color"]["ref_id"])->getEntityDataClass()::getList([
+            "select" => ["ID", "NAME", "HEX"],
+            "order" => ["ID"=>"ASC"]
+        ])->fetchCollection();
+        foreach ($frameColors as $frameColor){
+            $createValues["frame_color"][] = [
+                "id" => $frameColor->getId(),
+                "name" => $frameColor->getName(),
+                "color" => $frameColor->getHex()->getValue()
+            ];
+        }
+
+        $createValues["dial_color"] = $createValues["frame_color"];
+
+        $createValues["country"] = [];
+        $countries = Iblock::wakeUp(self::FIELDS["country"]["ref_id"])->getEntityDataClass()::getList([
+            "select" => ["ID", "NAME"],
+            "order" => ["ID"=>"ASC"]
+        ])->fetchCollection();
+        foreach ($countries as $country){
+            $createValues["country"][] = [
+                "id" => $country->getId(),
+                "name" => $country->getName()
+            ];
+        }
+
+        $createValues["seller_type"] = self::getPropsList("seller_type");
+        $createValues["material"] = self::getPropsList("material");
+        $createValues["form"] = self::getPropsList("form");
+        $createValues["size"] = self::getPropsList("size");
+        $createValues["watchband"] = self::getPropsList("watchband");
+        $createValues["clasp"] = self::getPropsList("clasp");
+        $createValues["dial"] = self::getPropsList("dial");
+        $createValues["water_protection"] = self::getPropsList("water_protection");
+
+        $createValues["promotion_type"] = [];
+        $promotionTypes = Iblock::wakeUp(self::FIELDS["promotion_type"]["ref_id"])->getEntityDataClass()::getList([
+            "select" => ["ID", "NAME", "PREVIEW_TEXT", "PRICE", "LIST"],
+            "order" => ["ID"=>"ASC"]
+        ])->fetchCollection();
+        foreach ($promotionTypes as $promotionType){
+            $list = [];
+            foreach ($promotionType->getList()->getAll() as $value){
+                $list[] = $value->getValue();
+            }
+            $createValues["promotion_type"][] = [
+                "id" => $promotionType->getId(),
+                "name" => $promotionType->getName(),
+                "description" => $promotionType->getPreviewText(),
+                "price" => $promotionType->getPrice()?->getValue(),
+                "list" => $list
+            ];
+        }
+
+        $createValues["documents_list"] = [];
+        $documentLists = Iblock::wakeUp(self::FIELDS["documents_list"]["ref_id"])->getEntityDataClass()::getList([
+            "select" => ["ID", "NAME"],
+            "order" => ["ID"=>"ASC"]
+        ])->fetchCollection();
+        foreach ($documentLists as $documentList){
+            $createValues["documents_list"][] = [
+                "id" => $documentList->getId(),
+                "name" => $documentList->getName()
+            ];
+        }
+        /*foreach(self::FIELDS as $alias => $field){
+            if(($field["rule"] & ModelRules::CREATE) > 0){
                 switch ($field["type"]){
                     case FieldType::IB_EL:{
                         $createValues[$alias] = Iblock::wakeUp($field["ref_id"])->getEntityDataClass()::getList([
@@ -292,7 +441,7 @@ class AdService extends ServiceBase
                     }
                 }
             }
-        }
+        }*/
         return $createValues;
     }
 
@@ -546,5 +695,21 @@ class AdService extends ServiceBase
         $el["more"] = array_column($moreEls, "ID");
         unset($el["brand_id"], $el["mechanism_id"]);
         return $el;
+    }
+
+    public static function getPropsList($propName){
+        return UserFieldEnumTable::getList([
+            "select" => ["ID", "VALUE"],
+            "filter" => ["USER_FIELD.FIELD_NAME" => self::FIELDS[$propName]["field"]],
+            "runtime" => [
+                "USER_FIELD" => [
+                    "data_type" => UserFieldTable::class,
+                    "reference" => [
+                        "=this.USER_FIELD_ID" => "ref.ID"
+                    ],
+                    ["join_type"=>"left"]
+                ]
+            ]
+        ])->fetchAll();
     }
 }

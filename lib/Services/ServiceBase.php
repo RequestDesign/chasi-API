@@ -11,8 +11,8 @@ use Bitrix\Main\ORM\Fields\ExpressionField;
 use Bitrix\Main\ORM\Query\Filter\ConditionTree;
 use Bitrix\Main\ORM\Query\Result;
 use Bitrix\Main\UserFieldTable;
+use Bitrix\Main\UserTable;
 use Bitrix\Main\Web\Json;
-use Bitrix\Translate\Controller\Editor\SaveFile;
 use Site\Api\Entity\UserFieldEnumTable;
 use Site\Api\Enum\FieldType;
 use Bitrix\Main\Loader;
@@ -25,6 +25,7 @@ use Bitrix\Highloadblock\HighloadBlockTable;
 use Site\Api\Enum\FilterType;
 use Site\Api\Exceptions\CreateException;
 use Site\Api\Exceptions\FilterException;
+use Site\Api\Enum\ModelRules;
 
 class ServiceBase
 {
@@ -65,7 +66,7 @@ class ServiceBase
             $this->select = [];
             for ($i = 0; $i < count($fields); $i++) {
                 $curField = $fields[$i];
-                if (array_key_exists($curField, $self::FIELDS)){
+                if (array_key_exists($curField, $self::FIELDS) && (($self::FIELDS[$curField]["rule"] & ModelRules::READ) > 0)){
                     $this->select[$curField] = $self::FIELDS[$curField];
                 }
             }
@@ -273,6 +274,38 @@ class ServiceBase
                         }
                         break;
                     }
+                    case FieldType::USER:{
+                        if(array_key_exists("field", $selectField)){
+                            $user_fields = [
+                                $alias."|ID"=>$alias."_ALIAS.ID",
+                                $alias."|NAME"=>$alias."_ALIAS.NAME",
+                                $alias."|LAST_NAME"=>$alias."_ALIAS.LAST_NAME",
+                                $alias."|CITY" => $alias."_ALIAS.PERSONAL_CITY",
+                                $alias."|PHOTO" => "USER_FULL_PATH"
+                            ];
+                            foreach ($user_fields as $user_field_key => $user_field_value) {
+                                $this->queryParams["select"][$user_field_key] = $user_field_value;
+                            }
+                            $serverHost = (Context::getCurrent()->getRequest()->isHttps()?"https://":"http://").Context::getCurrent()->getServer()->getHttpHost();
+
+                            $this->queryParams["runtime"][$alias."_ALIAS"] = [
+                                'data_type' => UserTable::class,
+                                'reference' => [
+                                    '=this.'.$selectField["field"] => 'ref.ID'
+                                ],
+                                ['join_type' => 'left']
+                            ];
+                            $this->queryParams["runtime"][$alias."_photo"] = [
+                                "data_type" => FileTable::class,
+                                "reference" => [
+                                    "=this.".$alias."_ALIAS.PERSONAL_PHOTO" => "ref.ID"
+                                ],
+                                ["join_type" => "left"]
+                            ];
+                            $this->queryParams["runtime"][] = new ExpressionField('USER_FULL_PATH', 'CONCAT("'.$serverHost.'/upload/", %s, "/", %s)', [$alias."_photo.SUBDIR", $alias."_photo.FILE_NAME"]);
+                        }
+                        break;
+                    }
                     case FieldType::PHOTO:{
                         /*if(array_key_exists("field", $selectField)){
                             if(!array_key_exists("runtime", $this->queryParams)) $this->queryParams["runtime"] = [];
@@ -391,7 +424,7 @@ class ServiceBase
         foreach($this->request as $key => $value){
             $convertKey = $converter->process($key);
             $field = $self::FIELDS[$convertKey];
-            if(isset($field["createable"]) && $field["createable"]) {
+            if(($field["rule"] & ModelRules::CREATE) > 0) {
                 switch($self::FIELDS[$convertKey]["type"]){
                     case FieldType::IB_EL:{
                         $res = Iblock::wakeUp($field["ref_id"])->getEntityDataClass()::getById($value);
@@ -434,7 +467,7 @@ class ServiceBase
         foreach($this->files as $key => $files){
             $convertKey = $converter->process($key);
             $field = $self::FIELDS[$convertKey];
-            if(isset($field["createable"]) && $field["createable"]) {
+            if($field["rule"] & ModelRules::CREATE > 0) {
                 switch($self::FIELDS[$convertKey]["type"]){
                     case FieldType::PHOTO:{
                         $ids = [];

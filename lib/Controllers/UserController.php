@@ -80,6 +80,11 @@ class UserController extends Controller
                     ]),
                     new Authentication()
                 ]
+            ],
+            "getCurrentUser" => [
+                "+prefilters" => [
+                    new Authentication()
+                ]
             ]
         ];
     }
@@ -103,33 +108,28 @@ class UserController extends Controller
     public function getOneAction():array|EventResult
     {
         $request = $this->getRequest()->toArray();
-        $serverHost = (Context::getCurrent()->getRequest()->isHttps()?"https://":"http://").Context::getCurrent()->getServer()->getHttpHost();
-        $user = UserTable::getByPrimary($request["id"],
-            [
-                "select" => [
-                    'id',
-                    'EMAIL',
-                    'ACTIVE',
-                    'NAME',
-                    'LAST_NAME',
-                    'phone'=>'PERSONAL_PHONE',
-                    'city'=>'PERSONAL_CITY',
-                    "photo" => "FULL_PATH",
-                    "birthday" => "PERSONAL_BIRTHDAY",
-                    "gender" => "PERSONAL_GENDER"
-                ],
-                "runtime" => [
-                    "photo_alias" => [
-                        "data_type" => FileTable::class,
-                        "reference" => [
-                            "=this.PERSONAL_PHOTO" => "ref.ID"
-                        ],
-                        ["join_type" => "left"]
-                    ],
-                    new ExpressionField('FULL_PATH', 'CONCAT("'.$serverHost.'/upload/", %s, "/", %s)', ["photo_alias.SUBDIR", "photo_alias.FILE_NAME"])
-                ]
-            ]
-        )->fetch();
+        $serviceLocator = ServiceLocator::getInstance();
+        $userService = $serviceLocator->get("site.api.user");
+        $user = $userService->getOne($request['id']);
+        if($user){
+            $user["ACTIVE"] = $user["ACTIVE"] === "Y"?1:0;
+            return $user;
+        }
+        else{
+            $this->addError(new Error(
+                "Пользователь не найден",
+                "user_not_found"
+            ));
+            http_response_code(404);
+            return new EventResult(EventResult::ERROR, null, 'site.api', $this);
+        }
+    }
+
+    public function getCurrentUserAction(): array|EventResult
+    {
+        $serviceLocator = ServiceLocator::getInstance();
+        $userService = $serviceLocator->get("site.api.user");
+        $user = $userService->getOne($this->getCurrentUser()->getId());
         if($user){
             $user["ACTIVE"] = $user["ACTIVE"] === "Y"?1:0;
             return $user;

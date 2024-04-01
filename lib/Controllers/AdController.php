@@ -11,11 +11,13 @@ use Bitrix\Main\EventResult;
 use Bitrix\Main\Response;
 use Bitrix\Main\Web\Json;
 use Site\Api\Exceptions\CreateException;
+use Site\Api\Exceptions\EditException;
 use Site\Api\Exceptions\FilterException;
 use Site\Api\Postfilters\ChangeKeyCase;
 use Site\Api\Postfilters\FilterReorder;
 use Site\Api\Postfilters\RecursiveResponseList;
 use Site\Api\Prefilters\Csrf;
+use Site\Api\Prefilters\EditAd;
 use Site\Api\Prefilters\Validator;
 use Site\Api\Services\Validation;
 
@@ -23,6 +25,8 @@ class AdController extends Controller
 {
 
     private array $navData = [];
+    private const DRAFT_STATUS_ID = 40;
+
     /**
      * @return array
      */
@@ -49,12 +53,12 @@ class AdController extends Controller
         return $adService->getFilter();
     }
 
-    public function createAction(): array|EventResult
+    public function createAction($addParams = []): array|EventResult
     {
         $serviceLocator = ServiceLocator::getInstance();
         $adService = $serviceLocator->get("site.api.ad");
         try{
-            $res = $adService->create();
+            $res = $adService->create($addParams);
             if(!$res->isSuccess()){
                 foreach($res->getErrors() as $error){
                     $this->addError($error);
@@ -68,6 +72,12 @@ class AdController extends Controller
             http_response_code(400);
             return new EventResult(EventResult::ERROR, null, null, $this);
         }
+    }
+
+    public function createDraftAction(): array|EventResult
+    {
+        $params = ["UF_STATUS" => self::DRAFT_STATUS_ID];
+        return $this->createAction($params);
     }
 
     public function getCreateValuesAction(): array|EventResult
@@ -93,6 +103,34 @@ class AdController extends Controller
             ));
             http_response_code(404);
             return new EventResult(EventResult::ERROR, null, "site.api", $this);
+        }
+    }
+
+    public function editAction(): array|EventResult
+    {
+        $serviceLocator = ServiceLocator::getInstance();
+        $adService = $serviceLocator->get("site.api.ad");
+        try{
+            try{
+                $res = $adService->edit();
+                if(!$res->isSuccess()){
+                    foreach($res->getErrors() as $error){
+                        $this->addError($error);
+                    }
+                    return new EventResult(EventResult::ERROR, null, null, $this);
+                }
+                return ["id" => $res->getId()];
+            }
+            catch (CreateException $e){
+                $this->addError(new Error($e->getMessage(), EditException::INVALID_EDIT_DATA, ["field"=>$e->getField()]));
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, null, $this);
+            }
+        }
+        catch(EditException $e){
+            $this->addError(new Error($e->getMessage(), EditException::ELEMENT_DOESNT_EXIST));
+            http_response_code(400);
+            return new EventResult(EventResult::ERROR, null, null, $this);
         }
     }
 
@@ -128,7 +166,6 @@ class AdController extends Controller
             "create" => [
                 "+prefilters" => [
                     new Authentication(),
-                    //отсутствует наличие документов
                     new Validator([
                         (new Validation("brand"))->number()->required(),
                         (new Validation("model"))->required()->maxLength(255),
@@ -137,20 +174,53 @@ class AdController extends Controller
                         (new Validation("material"))->required()->number(),
                         (new Validation("watchband"))->required()->number(),
                         (new Validation("sellerType"))->required()->number(),
-                        (new Validation("year"))->required()->number(),
-                        (new Validation("mechanism"))->required()->number(),
-                        (new Validation("frameColor"))->required()->number(),
-                        (new Validation("country"))->required()->number(),
-                        (new Validation("form"))->required()->number(),
-                        (new Validation("size"))->required()->number(),
-                        (new Validation("clasp"))->required()->number(),
-                        (new Validation("dial"))->required()->number(),
-                        (new Validation("dialColor"))->required()->number(),
-                        (new Validation("waterProtection"))->required()->number(),
-                        (new Validation("description"))->required()->maxLength(200),
+                        (new Validation("documentsList"))->required()->number(),
+                        (new Validation("documentsDescription"))->maxLength(255),
+                        (new Validation("year"))->number(),
+                        (new Validation("mechanism"))->number(),
+                        (new Validation("frameColor"))->number(),
+                        (new Validation("country"))->number(),
+                        (new Validation("form"))->number(),
+                        (new Validation("size"))->number(),
+                        (new Validation("clasp"))->number(),
+                        (new Validation("dial"))->number(),
+                        (new Validation("dialColor"))->number(),
+                        (new Validation("waterProtection"))->number(),
+                        (new Validation("description"))->maxLength(200),
                         (new Validation("photo"))->required()->image(3)->maxCount(10),
-                        (new Validation("price"))->required()->price(),
+                        (new Validation("price"))->price()->required(),
                         (new Validation("promotion"))->required()->bool(),
+                        (new Validation("promotionType"))->number(),
+                    ])
+                ]
+            ],
+            "createDraft" => [
+                "+prefilters" => [
+                    new Authentication(),
+                    new Validator([
+                        (new Validation("brand"))->number()->required(),
+                        (new Validation("model"))->maxLength(255)->required(),
+                        (new Validation("condition"))->number(),
+                        (new Validation("gender"))->number(),
+                        (new Validation("material"))->number(),
+                        (new Validation("watchband"))->number(),
+                        (new Validation("sellerType"))->number(),
+                        (new Validation("documentsList"))->number(),
+                        (new Validation("documentsDescription"))->maxLength(255),
+                        (new Validation("year"))->number(),
+                        (new Validation("mechanism"))->number(),
+                        (new Validation("frameColor"))->number(),
+                        (new Validation("country"))->number(),
+                        (new Validation("form"))->number(),
+                        (new Validation("size"))->number(),
+                        (new Validation("clasp"))->number(),
+                        (new Validation("dial"))->number(),
+                        (new Validation("dialColor"))->number(),
+                        (new Validation("waterProtection"))->number(),
+                        (new Validation("description"))->maxLength(200),
+                        (new Validation("photo"))->image(3)->maxCount(10),
+                        (new Validation("price"))->price(),
+                        (new Validation("promotion"))->bool()->required(),
                         (new Validation("promotionType"))->number()
                     ])
                 ]
@@ -165,7 +235,16 @@ class AdController extends Controller
                     new RecursiveResponseList(),
                     new ChangeKeyCase()
                 ]
-            ]
+            ],
+            "edit" => [
+                "+prefilters" => [
+                    new Authentication(),
+                    new Validator([
+                        (new Validation("id"))->number()->required()
+                    ]),
+                    new EditAd()
+                ]
+            ],
         ];
     }
 
