@@ -9,6 +9,8 @@ use Bitrix\Main\Application;
 use Bitrix\Main\Context;
 use Bitrix\Main\FileTable;
 use Bitrix\Main\Loader;
+use Bitrix\Main\ORM\Query\Filter\Condition;
+use Bitrix\Main\ORM\Query\Filter\ConditionTree;
 use Bitrix\Main\UserFieldTable;
 use Bitrix\Main\UserTable;
 use Lib\HighloadBlock\WatchHighloadBlock;
@@ -26,9 +28,11 @@ use Site\Api\Entity\UserFieldEnumTable;
 use Site\Api\Enum\FieldType;
 use Site\Api\Enum\FilterType;
 use Site\Api\Enum\ModelRules;
+use Site\Api\Exceptions\AdNotFoundAuthException;
 use Site\Api\Exceptions\CreateException;
 use Site\Api\Exceptions\EditException;
 use Site\Api\Exceptions\FilterException;
+use Site\Api\Exceptions\PublishException;
 
 
 class AdService extends ServiceBase
@@ -38,7 +42,10 @@ class AdService extends ServiceBase
     public const MOVING = 45;
     public const MODERATED = 46;
     public const UNPAYED = 43;
+    public const CLOSED = 50;
+    public const EXPIRED = 49;
     public const DRAFT = 40;
+    public const REJECTED = 41;
     protected const FIELDS = [
         "id" => array(
             "type"=> FieldType::SCALAR,
@@ -235,7 +242,7 @@ class AdService extends ServiceBase
     /**
      * @return array
      */
-    public function getList():array
+    public function getList($params = []):array
     {
         $request = Application::getInstance()->getContext()->getRequest()->toArray();
         $queryParams = $this->getQueryParams();
@@ -253,7 +260,35 @@ class AdService extends ServiceBase
             $queryParams["filter"] = $arFilter;
             $queryParams["runtime"] = $arRuntime;
         }
-        $queryParams["filter"]["=UF_STATUS"] = [self::POSTED, self::MOVING];
+        $queryParams["filter"]->addCondition(ConditionTree::createFromArray([["UF_STATUS", 'in', [self::POSTED, self::MOVING]]]));
+        if(isset($params["filter"])){
+            $addFilter = ConditionTree::createFromArray($params["filter"]);
+            //$queryParams["filter"]->addCondition();
+            foreach($addFilter->getConditions() as $condition){
+                $hasCondition = false;
+                foreach ($queryParams["filter"]->getConditions() as $conditionTree){
+                    if($conditionTree instanceof ConditionTree){
+                        foreach ($conditionTree->getConditions() as $conditionNested){
+                            if($condition->getColumn() == $conditionNested->getColumn()){
+                                $conditionTree->replaceCondition($conditionNested, $condition);
+                                $hasCondition = true;
+                            }
+                        }
+                    }
+                    else if($conditionTree instanceof Condition){
+                        if($condition->getColumn() == $conditionTree->getColumn()){
+                            $queryParams["filter"]->replaceCondition($conditionTree, $condition);
+                            $hasCondition = true;
+                        }
+                    }
+                }
+                if(!$hasCondition){
+                    $queryParams["filter"]->addCondition($condition);
+                }
+            }
+            unset($params["filter"]);
+        }
+        $queryParams = array_merge($queryParams, $params);
         $dbElements = $entity_data_class::getList($queryParams);
         $elements = $dbElements->fetchAll();
         if(count($elements) && array_key_exists('photo', $elements[0])){
@@ -711,5 +746,78 @@ class AdService extends ServiceBase
                 ]
             ]
         ])->fetchAll();
+    }
+
+    public function publish(){
+        global $USER;
+        $id = $this->request["id"];
+        $hlblock = HL\HighloadBlockTable::getById(self::AD_HL_ID)->fetch();
+        $entity = HL\HighloadBlockTable::compileEntity($hlblock);
+        $entity_data_class = $entity->getDataClass();
+
+        $el = $entity_data_class::getByPrimary($id, [
+            "select" => ["ID", "UF_STATUS", "STATUS_NAME"=>"UF_STATUS_ALIAS.VALUE" ],
+            "filter" => ["ID" => $id, "UF_USER_ID"=>$USER->GetID()],
+            "runtime" => [
+                "UF_STATUS_ALIAS" => [
+                    "data_type" => UserFieldEnumTable::class,
+                    "reference" => [
+                        "=this.UF_STATUS" => "ref.ID",
+                    ],
+                    ["join_type"=>"left"]
+                ],
+            ]
+        ])->fetch();
+
+        if(!$el){
+            throw new AdNotFoundAuthException("Объявление не существует");
+        }
+
+        if(!in_array($el["UF_STATUS"], [self::UNPAYED, self::EXPIRED, self::DRAFT])){
+            throw new PublishException("Нельзя опубликовать объявление со статусом \"{$el["STATUS_NAME"]}\"");
+        }
+        $editData = [
+            "UF_STATUS" => self::MODERATED
+        ];
+        if($el["UF_STATUS"] != self::DRAFT){
+            $editData["UF_PROMOT"] = 0;
+        }
+        $wh = new WatchHighloadBlock();
+        return $wh->update($this->request["id"], $editData);
+    }
+
+    public function archieve(){
+        global $USER;
+        $id = $this->request["id"];
+        $hlblock = HL\HighloadBlockTable::getById(self::AD_HL_ID)->fetch();
+        $entity = HL\HighloadBlockTable::compileEntity($hlblock);
+        $entity_data_class = $entity->getDataClass();
+
+        $el = $entity_data_class::getByPrimary($id, [
+            "select" => ["ID", "UF_STATUS", "STATUS_NAME"=>"UF_STATUS_ALIAS.VALUE" ],
+            "filter" => ["ID" => $id, "UF_USER_ID"=>$USER->GetID()],
+            "runtime" => [
+                "UF_STATUS_ALIAS" => [
+                    "data_type" => UserFieldEnumTable::class,
+                    "reference" => [
+                        "=this.UF_STATUS" => "ref.ID",
+                    ],
+                    ["join_type"=>"left"]
+                ],
+            ]
+        ])->fetch();
+
+        if(!$el){
+            throw new AdNotFoundAuthException("Объявление не существует");
+        }
+
+        if(!in_array($el["UF_STATUS"], [self::UNPAYED, self::DRAFT, self::REJECTED, self::POSTED, self::MOVING, self::MODERATED])){
+            throw new PublishException("Нельзя добавить в архив объявление со статусом \"{$el["STATUS_NAME"]}\"");
+        }
+        $editData = [
+            "UF_STATUS" => self::CLOSED
+        ];
+        $wh = new WatchHighloadBlock();
+        return $wh->update($this->request["id"], $editData);
     }
 }

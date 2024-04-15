@@ -10,9 +10,11 @@ use Bitrix\Main\Error;
 use Bitrix\Main\EventResult;
 use Bitrix\Main\Response;
 use Bitrix\Main\Web\Json;
+use Site\Api\Exceptions\AdNotFoundAuthException;
 use Site\Api\Exceptions\CreateException;
 use Site\Api\Exceptions\EditException;
 use Site\Api\Exceptions\FilterException;
+use Site\Api\Exceptions\PublishException;
 use Site\Api\Postfilters\ChangeKeyCase;
 use Site\Api\Postfilters\FilterReorder;
 use Site\Api\Postfilters\RecursiveResponseList;
@@ -26,16 +28,23 @@ class AdController extends Controller
 
     private array $navData = [];
     private const DRAFT_STATUS_ID = 40;
+    private const REJECTED_STATUS_ID = 41;
+    private const UNPAYED_STATUS_ID = 43;
+    private const POSTED_STATUS_ID = 44;
+    private const MOVING_STATUS_ID = 45;
+    private const MODERATED_STATUS_ID = 46;
+    private const EXPIRED_STATUS_ID = 49;
+    private const CLOSED_STATUS_ID = 50;
 
     /**
      * @return array
      */
-    public function getListAction(): array|EventResult
+    public function getListAction($params = []): array|EventResult
     {
         $serviceLocator = ServiceLocator::getInstance();
         $adService = $serviceLocator->get("site.api.ad");
         try{
-            $els = $adService->getList();
+            $els = $adService->getList($params);
             $this->navData = $adService->getNavigationData();
             return $els;
         }
@@ -131,6 +140,100 @@ class AdController extends Controller
             $this->addError(new Error($e->getMessage(), EditException::ELEMENT_DOESNT_EXIST));
             http_response_code(400);
             return new EventResult(EventResult::ERROR, null, null, $this);
+        }
+    }
+
+    public function getWaitingAction(){
+        $params = [
+            "filter" => [
+                ["UF_USER_ID", "=", $this->getCurrentUser()->getId()],
+                ["UF_STATUS", "in", [self::REJECTED_STATUS_ID, self::UNPAYED_STATUS_ID, self::EXPIRED_STATUS_ID]]
+            ]
+        ];
+        return $this->getListAction($params);
+    }
+
+    public function getDraftsAction(){
+        $params = [
+            "filter" => [
+                ["UF_USER_ID", "=", $this->getCurrentUser()->getId()],
+                ["UF_STATUS", "in", [self::DRAFT_STATUS_ID]]
+            ]
+        ];
+        return $this->getListAction($params);
+    }
+
+    public function getActiveAction(){
+        $params = [
+            "filter" => [
+                ["UF_USER_ID", "=", $this->getCurrentUser()->getId()],
+                ["UF_STATUS", "in", [self::MODERATED_STATUS_ID, self::MOVING_STATUS_ID, self::POSTED_STATUS_ID]]
+            ]
+        ];
+        return $this->getListAction($params);
+    }
+
+    public function getArchieveAction(){
+        $params = [
+            "filter" => [
+                ["UF_USER_ID", "=", $this->getCurrentUser()->getId()],
+                ["UF_STATUS", "in", [self::CLOSED_STATUS_ID]]
+            ]
+        ];
+        return $this->getListAction($params);
+    }
+
+    public function publishAction(){
+        $serviceLocator = ServiceLocator::getInstance();
+        $adService = $serviceLocator->get("site.api.ad");
+        try {
+            $res = $adService->publish();
+            if(!$res->isSuccess()){
+                foreach($res->getErrors() as $error){
+                    $this->addError($error);
+                }
+                return new EventResult(EventResult::ERROR, null, null, $this);
+            }
+            return ["id" => $res->getId()];
+        }
+        catch (\Exception $e){
+            if($e instanceof AdNotFoundAuthException) {
+                $this->addError(new Error($e->getMessage(), AdNotFoundAuthException::AD_NOT_FOUND));
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, null, $this);
+            }
+            if($e instanceof PublishException){
+                $this->addError(new Error($e->getMessage(), PublishException::ILLEGAL_STATUS));
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, null, $this);
+            }
+        }
+    }
+
+    public function archieveAction(){
+        $serviceLocator = ServiceLocator::getInstance();
+        $adService = $serviceLocator->get("site.api.ad");
+        try {
+            $res = $adService->archieve();
+            if(!$res->isSuccess()){
+                foreach($res->getErrors() as $error){
+                    $this->addError($error);
+                }
+                return new EventResult(EventResult::ERROR, null, null, $this);
+            }
+            return ["id" => $res->getId()];
+        }
+        catch (\Exception $e){
+            if($e instanceof AdNotFoundAuthException) {
+                $this->addError(new Error($e->getMessage(), AdNotFoundAuthException::AD_NOT_FOUND));
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, null, $this);
+            }
+            if($e instanceof PublishException){
+                $this->addError(new Error($e->getMessage(), PublishException::ILLEGAL_STATUS));
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, null, $this);
+            }
         }
     }
 
@@ -245,6 +348,58 @@ class AdController extends Controller
                     new EditAd()
                 ]
             ],
+            "getWaiting" => [
+                "+prefilters" => [
+                    new Authentication()
+                ],
+                "+postfilters" => [
+                    new RecursiveResponseList(),
+                    new ChangeKeyCase()
+                ]
+            ],
+            "getDrafts" => [
+                "+prefilters" => [
+                    new Authentication()
+                ],
+                "+postfilters" => [
+                    new RecursiveResponseList(),
+                    new ChangeKeyCase()
+                ]
+            ],
+            "getActive" => [
+                "+prefilters" => [
+                    new Authentication()
+                ],
+                "+postfilters" => [
+                    new RecursiveResponseList(),
+                    new ChangeKeyCase()
+                ]
+            ],
+            "getArchieve" => [
+                "+prefilters" => [
+                    new Authentication()
+                ],
+                "+postfilters" => [
+                    new RecursiveResponseList(),
+                    new ChangeKeyCase()
+                ]
+            ],
+            "publish" => [
+                "+prefilters" => [
+                    new Authentication(),
+                    new Validator([
+                        (new Validation("id"))->required()->number()
+                    ])
+                ]
+            ],
+            "archieve" => [
+                "+prefilters" => [
+                    new Authentication(),
+                    new Validator([
+                        (new Validation("id"))->required()->number()
+                    ])
+                ]
+            ]
         ];
     }
 

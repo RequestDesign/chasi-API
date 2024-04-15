@@ -2,6 +2,7 @@
 
 namespace Site\Api\Services;
 
+use Bitrix\Iblock\ORM\Query;
 use Bitrix\Main\Application;
 use Bitrix\Main\ArgumentException;
 use Bitrix\Main\Context;
@@ -371,6 +372,9 @@ class ServiceBase
                 }
             }
             $this->queryParams["filter"] = ConditionTree::createFromArray($this->filter);
+        }
+        else {
+            $this->queryParams["filter"] = ConditionTree::createFromArray([]);
         }
         if(count($this->sort)){
             $this->queryParams["order"] = $this->sort;

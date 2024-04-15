@@ -38,6 +38,12 @@ class Routes
             $routes->delete('users', [UserController::class, 'delete']);
             $routes->patch('users/{id}', [UserController::class, 'edit']);
             $routes->get('user', [UserController::class, 'getCurrentUser']);
+            $routes->get('user/ads/waiting', [AdController::class, 'getWaiting']);
+            $routes->get('user/ads/drafts', [AdController::class, 'getDrafts']);
+            $routes->get('user/ads/active', [AdController::class, 'getActive']);
+            $routes->get('user/ads/archieve', [AdController::class, 'getArchieve']);
+            $routes->patch('user/ads/{id}/publish', [AdController::class, 'publish']);
+            $routes->patch('user/ads/{id}/archieve', [AdController::class, 'archieve']);
 
             // бренды
             $routes->get('brands', [BrandController::class, 'getList']);
