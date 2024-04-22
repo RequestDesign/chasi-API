@@ -2,7 +2,7 @@
 
 namespace Site\Api\Services;
 
-use Bitrix\Iblock\ORM\Query;
+use Bitrix\Iblock\PropertyEnumerationTable;
 use Bitrix\Main\Application;
 use Bitrix\Main\ArgumentException;
 use Bitrix\Main\Context;
@@ -263,9 +263,10 @@ class ServiceBase
                     }
                     case FieldType::ULIST:{
                         if(array_key_exists("field", $selectField)){
+                            $runtime_alias = implode('_', explode('.', $selectField["field"]."_ALIAS"));
                             if(!array_key_exists("runtime", $this->queryParams)) $this->queryParams["runtime"] = [];
-                            $this->queryParams["select"][$alias] = $selectField["field"]."_ALIAS.VALUE";
-                            $this->queryParams["runtime"][$selectField["field"]."_ALIAS"] = [
+                            $this->queryParams["select"][$alias] = $runtime_alias.".VALUE";
+                            $this->queryParams["runtime"][$runtime_alias] = [
                                 'data_type' => UserFieldEnumTable::class,
                                 'reference' => [
                                     '=this.'.$selectField["field"] => 'ref.ID'
@@ -304,6 +305,21 @@ class ServiceBase
                                 ["join_type" => "left"]
                             ];
                             $this->queryParams["runtime"][] = new ExpressionField('USER_FULL_PATH', 'CONCAT("'.$serverHost.'/upload/", %s, "/", %s)', [$alias."_photo.SUBDIR", $alias."_photo.FILE_NAME"]);
+                        }
+                        break;
+                    }
+                    case FieldType::IB_LIST:{
+                        if(array_key_exists("field", $selectField)){
+                            $runtime_alias = implode('_', explode('.', $selectField["field"]."_ALIAS"));
+                            if(!array_key_exists("runtime", $this->queryParams)) $this->queryParams["runtime"] = [];
+                            $this->queryParams["select"][$alias] = $runtime_alias.".VALUE";
+                            $this->queryParams["runtime"][$runtime_alias] = [
+                                'data_type' => PropertyEnumerationTable::class,
+                                'reference' => [
+                                    '=this.'.$selectField["field"] => 'ref.ID'
+                                ],
+                                ['join_type' => 'left']
+                            ];
                         }
                         break;
                     }

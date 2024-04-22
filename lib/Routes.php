@@ -3,11 +3,14 @@
 namespace Site\Api;
 
 use Bitrix\Main\Routing\RoutingConfigurator;
+use Site\Api\Controllers\AboutController;
 use Site\Api\Controllers\AdController;
 use Site\Api\Controllers\AdvController;
 use Site\Api\Controllers\AuthenticationController;
 use Site\Api\Controllers\BrandController;
 use Site\Api\Controllers\CsrfTokenController;
+use Site\Api\Controllers\FAQController;
+use Site\Api\Controllers\ReviewController;
 use Site\Api\Controllers\UserController;
 
 /**
@@ -37,6 +40,7 @@ class Routes
             $routes->get('users/{id}', [UserController::class, 'getOne']);
             $routes->delete('users', [UserController::class, 'delete']);
             $routes->patch('users/{id}', [UserController::class, 'edit']);
+            $routes->get('users/{id}/reviews', [ReviewController::class, 'getList']);
             $routes->get('user', [UserController::class, 'getCurrentUser']);
             $routes->get('user/ads/waiting', [AdController::class, 'getWaiting']);
             $routes->get('user/ads/drafts', [AdController::class, 'getDrafts']);
@@ -44,6 +48,7 @@ class Routes
             $routes->get('user/ads/archieve', [AdController::class, 'getArchieve']);
             $routes->patch('user/ads/{id}/publish', [AdController::class, 'publish']);
             $routes->patch('user/ads/{id}/archieve', [AdController::class, 'archieve']);
+            $routes->patch('user/reviews', [ReviewController::class, 'getUserReviews']);
 
             // бренды
             $routes->get('brands', [BrandController::class, 'getList']);
@@ -60,11 +65,14 @@ class Routes
             // рекламы
 
             $routes->get('advs', [AdvController::class, 'getList']);
-            //$routes->post('registration', [AuthenticationController::class, 'registrationAction']);
-            //$routes->get('logout', [AuthenticationController::class, 'logoutAction']);
-            //$routes->post('confirm.registration', [AuthenticationController::class, 'confirmRegistrationAction']);
-            //$routes->post('forget.password', [AuthenticationController::class, 'forgetPasswordAction']);
-            //$routes->get('get.sessid', [CsrfTokenController::class, 'getCsrfAction']);
+
+            // faq
+
+            $routes->get('faq', [FAQController::class, 'getList']);
+
+            // about
+
+            $routes->get('about', [AboutController::class, 'getOne']);
         });
     }
 }

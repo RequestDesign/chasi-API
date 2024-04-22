@@ -12,4 +12,5 @@ class FieldType{
     public const BOOL = 5;
 
     public const USER = 6;
+    public const IB_LIST = 7;
 };

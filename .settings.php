@@ -19,6 +19,9 @@ return [
             ],
             'site.api.user' => [
                 'className' => \Site\Api\Services\UserService::class
+            ],
+            'site.api.review' => [
+                'className' => \Site\Api\Services\ReviewService::class
             ]
         ],
         'readonly' => true

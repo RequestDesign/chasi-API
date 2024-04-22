@@ -214,7 +214,7 @@ class UserController extends Controller
                 }
             }
         }
-        if(isset($request["oldPassword"]) || isset($request["newPassword"]) || isset($request["confrimPassword"])){
+        if(isset($request["oldPassword"]) || isset($request["newPassword"]) || isset($request["confirmPassword"])){
             if(!isset($request["oldPassword"])){
                 $hasErrors = true;
                 $this->addError(new Error(
@@ -229,7 +229,7 @@ class UserController extends Controller
                     "new_password_invalid"
                 ));
             }
-            else if(!isset($request["confrimPassword"])){
+            else if(!isset($request["confirmPassword"])){
                 $hasErrors = true;
                 $this->addError(new Error(
                     "Новый пароль не подтвержден",
@@ -238,7 +238,7 @@ class UserController extends Controller
             }
             else{
                 $errors = [];
-                $res = EditPassClass::EditPassClassMethod($request["id"], $request["oldPassword"], $request["newPassword"], $request["confrimPassword"], $errors);
+                $res = EditPassClass::EditPassClassMethod($request["id"], $request["oldPassword"], $request["newPassword"], $request["confirmPassword"], $errors);
                 if(!$res){
                     foreach($errors as $error_key => $error_message){
                         switch ($error_key){
