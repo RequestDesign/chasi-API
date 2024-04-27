@@ -15,6 +15,7 @@ use Bitrix\Main\EventResult;
 use Bitrix\Main\FileTable;
 use Bitrix\Main\ORM\Fields\ExpressionField;
 use Bitrix\Main\UserTable;
+use Site\Api\Exceptions\PhoneEmailException;
 use Site\Api\Exceptions\RegisterException;
 use Site\Api\Postfilters\ChangeKeyCase;
 use Site\Api\Prefilters\Csrf;
@@ -46,7 +47,8 @@ class UserController extends Controller
             "create" => [
                 "+prefilters" => [
                     new Validator([
-                        (new Validation("email"))->email()->required(),
+                        (new Validation("email"))->email(),
+                        (new Validation("phone"))->number(),
                         (new Validation("name"))->maxLength(255)->required(),
                         (new Validation("city"))->maxLength(255)->required(),
                         (new Validation("password"))->required()->password(),
@@ -98,8 +100,13 @@ class UserController extends Controller
             http_response_code(201);
             return ["id" => $id];
         }
-        catch (RegisterException $e){
-            $this->addError(new Error($e->getMessage(), $e->getExceptionCode()));
+        catch (\Exception $e){
+            if ($e instanceof RegisterException){
+                $this->addError(new Error($e->getMessage(), $e->getExceptionCode()));
+            }
+            if ($e instanceof PhoneEmailException){
+                $this->addError(new Error($e->getMessage(), PhoneEmailException::ERROR_REQUIRED));
+            }
             http_response_code(400);
             return new EventResult(EventResult::ERROR, null, null, $this);
         }

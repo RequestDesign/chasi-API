@@ -12,6 +12,7 @@ use Bitrix\Main\UserTable;
 use RegEmailClass;
 use RegEmail2Class;
 use RegEmail3Class;
+use Site\Api\Exceptions\PhoneEmailException;
 use Site\Api\Exceptions\RegisterException;
 
 class UserService
@@ -37,10 +38,20 @@ class UserService
     public function register()
     {
         $errors = [];
-        $res = RegEmailClass::RegEmailMethod($this->request["email"], $errors);
+        if(empty($this->request["email"]) && empty($this->request["phone"])){
+            throw new PhoneEmailException("Одно из полей - 'email' или 'phone' должно быть обязательным");
+        }
+        $res = RegEmailClass::RegEmailMethod($this->request["email"] ?? null, $this->request["phone"] ?? null ,$errors);
         if(!$res) {
-            $exception = new RegisterException("Аккаунт с указанным email уже существует");
-            $exception->setExceptionCode(RegisterException::EMAIL_EXCEPTION_CODE);
+            $exception = null;
+            if(!empty($this->request["email"])){
+                $exception = new RegisterException("Аккаунт с указанным email уже существует");
+                $exception->setExceptionCode(RegisterException::EMAIL_EXCEPTION_CODE);
+            }
+            else {
+                $exception = new RegisterException("Аккаунт с указанным номер телефона уже существует");
+                $exception->setExceptionCode(RegisterException::PHONE_EXCEPTION_CODE);
+            }
             throw $exception;
         }
         $res = RegEmail2Class::RegEmail2Method($this->request["password"], $this->request["confirmPassword"], $errors);
@@ -49,7 +60,7 @@ class UserService
             $exception->setExceptionCode(RegisterException::PASSWORD_EXCEPTION_CODE);
             throw $exception;
         }
-        $id = RegEmail3Class::RegEmail3Method($this->request["email"], $this->request["password"], $this->request["name"], $this->request["city"], $errors);
+        $id = RegEmail3Class::RegEmail3Method($this->request["email"] ?? null, $this->request["phone"] ?? null, $this->request["password"], $this->request["name"], $this->request["city"], $errors);
         if(!$id) {
             $exception = new RegisterException("Внутренняя ошибка регистрации");
             $exception->setExceptionCode(RegisterException::USER_CREATION_EXCEPTION_CODE);

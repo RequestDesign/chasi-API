@@ -236,6 +236,29 @@ class AdController extends Controller
             }
         }
     }
+    
+    public function deleteAction() 
+    {
+        $serviceLocator = ServiceLocator::getInstance();
+        $adService = $serviceLocator->get("site.api.ad");
+        try{
+            $res = $adService->delete();
+            if(!$res->isSuccess()){
+                foreach($res->getErrors() as $error){
+                    $this->addError($error);
+                }
+                return new EventResult(EventResult::ERROR, null, null, $this);
+            }
+            return ["id" => $res->getId()];
+        }
+        catch (\Exception $e){
+            if($e instanceof AdNotFoundAuthException) {
+                $this->addError(new Error($e->getMessage(), AdNotFoundAuthException::AD_NOT_FOUND));
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, null, $this);
+            }
+        }
+    }
 
     protected function getDefaultPreFilters():array
     {
@@ -393,6 +416,14 @@ class AdController extends Controller
                 ]
             ],
             "archieve" => [
+                "+prefilters" => [
+                    new Authentication(),
+                    new Validator([
+                        (new Validation("id"))->required()->number()
+                    ])
+                ]
+            ],
+            "delete" => [
                 "+prefilters" => [
                     new Authentication(),
                     new Validator([

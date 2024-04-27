@@ -39,7 +39,7 @@ class Routes
             $routes->post('register', [UserController::class, 'create']);
             $routes->get('users/{id}', [UserController::class, 'getOne']);
             $routes->delete('users', [UserController::class, 'delete']);
-            $routes->patch('users/{id}', [UserController::class, 'edit']);
+            $routes->post('users/{id}', [UserController::class, 'edit']);
             $routes->get('users/{id}/reviews', [ReviewController::class, 'getList']);
             $routes->get('user', [UserController::class, 'getCurrentUser']);
             $routes->get('user/ads/waiting', [AdController::class, 'getWaiting']);
@@ -61,6 +61,7 @@ class Routes
             $routes->get('filter', [AdController::class, 'getFilter']);
             $routes->get('ads/{id}', [AdController::class, 'getOne']);
             $routes->put('ads/{id}', [AdController::class, 'edit']);
+            $routes->delete('ads/{id}', [AdController::class, 'delete']);
 
             // рекламы
 

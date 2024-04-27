@@ -12,6 +12,7 @@ use Bitrix\Main\Application;
 use Bitrix\Main\Engine\ActionFilter;
 use Bitrix\Main\Engine\Controller;
 use Bitrix\Main\Error;
+use Site\Api\Exceptions\PhoneEmailException;
 use Site\Api\Postfilters\ChangeKeyCase;
 use Site\Api\Prefilters\Csrf;
 use Site\Api\Prefilters\Validator;
@@ -62,7 +63,8 @@ class AuthenticationController extends Controller
             'forgot' => [
                 '+prefilters' => [
                     new Validator([
-                        (new Validation('email'))->required()->email()
+                        (new Validation('email'))->email(),
+                        (new Validation('phone'))->number()
                     ])
                 ],
                 'postfilters' => [
@@ -145,8 +147,16 @@ class AuthenticationController extends Controller
     public function forgotAction():array|EventResult
     {
         $request = $this->getRequest()->toArray();
+        if(empty($request["email"]) && empty($request["phone"])){
+            $this->addError(new Error(
+                "Одно из полей - 'email' или 'phone' должно быть обязательным",
+                PhoneEmailException::ERROR_REQUIRED
+            ));
+            http_response_code(400);
+            return new EventResult(EventResult::ERROR, null, 'site.api', $this);
+        }
         $errors = [];
-        $id = ForgotPassEmail1Class::ForgotPassEmail1Method($request["email"], $errors);
+        $id = ForgotPassEmail1Class::ForgotPassEmail1Method($request["email"] ?? null, $request["phone"] ?? null, $errors);
         if(!$id){
             $this->addError(new Error(
                 "Пользователь не существует",

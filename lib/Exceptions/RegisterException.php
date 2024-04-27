@@ -5,6 +5,7 @@ namespace Site\Api\Exceptions;
 class RegisterException extends \Bitrix\Main\SystemException
 {
     public const EMAIL_EXCEPTION_CODE = "email_exists";
+    public const PHONE_EXCEPTION_CODE = "phone_exists";
     public const PASSWORD_EXCEPTION_CODE = "passwords_dont_match";
     public const USER_CREATION_EXCEPTION_CODE = "create_user_error";
     private $exceptionCode;

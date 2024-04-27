@@ -249,17 +249,6 @@ class AdService extends ServiceBase
         $hlblock = HL\HighloadBlockTable::getById(self::AD_HL_ID)->fetch();
         $entity = HL\HighloadBlockTable::compileEntity($hlblock);
         $entity_data_class = $entity->getDataClass();
-        if(isset($request["q"]) && $request["q"]){
-            $searchFilter = [];
-            $searchRuntime = [];
-            SearchDataClass::GetSearchClassData($request["q"], $searchFilter, $searchRuntime);
-            $arFilter = $queryParams["filter"] ?? [];
-            $arRuntime = $queryParams["runtime"] ?? [];
-            $arFilter = array_merge($arFilter, $searchFilter);
-            $arRuntime = array_merge($arRuntime, $searchRuntime);
-            $queryParams["filter"] = $arFilter;
-            $queryParams["runtime"] = $arRuntime;
-        }
         $queryParams["filter"]->addCondition(ConditionTree::createFromArray([["UF_STATUS", 'in', [self::POSTED, self::MOVING]]]));
         if(isset($params["filter"])){
             $addFilter = ConditionTree::createFromArray($params["filter"]);
@@ -287,6 +276,18 @@ class AdService extends ServiceBase
                 }
             }
             unset($params["filter"]);
+        }
+        $queryParams["filter"] = $this->conditionTreeToArray($queryParams["filter"]);
+        if(isset($request["q"]) && $request["q"]){
+            $searchFilter = [];
+            $searchRuntime = [];
+            SearchDataClass::GetSearchClassData($request["q"], $searchFilter, $searchRuntime);
+            $arFilter = $queryParams["filter"] ?? [];
+            $arRuntime = $queryParams["runtime"] ?? [];
+            $arFilter = array_merge($arFilter, $searchFilter);
+            $arRuntime = array_merge($arRuntime, $searchRuntime);
+            $queryParams["filter"] = $arFilter;
+            $queryParams["runtime"] = $arRuntime;
         }
         $queryParams = array_merge($queryParams, $params);
         $dbElements = $entity_data_class::getList($queryParams);
@@ -576,15 +577,24 @@ class AdService extends ServiceBase
 
         $el = $entity_data_class::getByPrimary($id, [
             "select" => [
-                "ID", 'photo'=>"UF_FOTO", "brand"=>"brand_alias.NAME", "brand_id"=>"brand_alias.ID",
-                "model"=>"UF_MODEL", "year"=>"UF_GOD", "price"=>"UF_PRICE", "condition"=>"condition_alias.VALUE",
-                "gender"=>"gender_alias.VALUE", "mechanism"=>"mechanism_alias.VALUE", "mechanism_id"=>"mechanism_alias.ID",
-                "frame_color"=>"color_alias.NAME", "country"=>"country_alias.NAME",
-                "material"=>"material_alias.VALUE", "form"=>"form_alias.VALUE", "size"=>"size_alias.VALUE",
-                "watchband"=>"watchband_alias.VALUE", "clasp"=>"clasp_alias.VALUE",
-                "dial"=>"dial_alias.VALUE", "dial_color"=>"dial_color_alias.NAME",
-                "water_protection"=>"water_protection_alias.VALUE", "description"=>"UF_DESC",
-                "date_created"=>"UF_CREATE_DATE", "seller_type"=>"seller_type_alias.VALUE",
+                "ID", 'photo'=>"UF_FOTO", "brand|ID"=>"brand_alias.ID",
+                "brand|NAME"=>"brand_alias.NAME", "brand_id"=>"brand_alias.ID",
+                "model"=>"UF_MODEL", "year"=>"UF_GOD", "price"=>"UF_PRICE",
+                "condition|ID"=>"condition_alias.ID", "condition|NAME"=>"condition_alias.VALUE",
+                "gender|ID"=>"gender_alias.ID", "gender|NAME"=>"gender_alias.VALUE",
+                "mechanism|ID"=>"mechanism_alias.ID", "mechanism|NAME"=>"mechanism_alias.VALUE", "mechanism_id"=>"mechanism_alias.ID",
+                "frame_color|ID"=>"color_alias.ID", "frame_color|NAME"=>"color_alias.NAME",
+                "country|ID"=>"country_alias.ID", "country|NAME"=>"country_alias.NAME",
+                "material|ID"=>"material_alias.ID", "material|NAME"=>"material_alias.VALUE",
+                "form|ID"=>"form_alias.ID", "form|NAME"=>"form_alias.VALUE",
+                "size|ID"=>"size_alias.ID", "size|NAME"=>"size_alias.VALUE",
+                "watchband|ID"=>"watchband_alias.ID", "watchband|NAME"=>"watchband_alias.VALUE",
+                "clasp|ID"=>"clasp_alias.ID", "clasp|NAME"=>"clasp_alias.VALUE",
+                "dial|ID"=>"dial_alias.ID", "dial|NAME"=>"dial_alias.VALUE",
+                "dial_color|ID"=>"dial_color_alias.ID", "dial_color|NAME"=>"dial_color_alias.NAME",
+                "water_protection|ID"=>"water_protection_alias.ID", "water_protection|NAME"=>"water_protection_alias.VALUE",
+                "description"=>"UF_DESC", "date_created"=>"UF_CREATE_DATE",
+                "seller_type|ID"=>"seller_type_alias.ID", "seller_type_alias|NAME"=>"seller_type_alias.VALUE",
                 "user|id"=>"user_alias.ID", "user|name"=>"user_alias.NAME",
                 "user|city"=>"user_alias.PERSONAL_CITY", ],
             "runtime" => [
@@ -819,5 +829,43 @@ class AdService extends ServiceBase
         ];
         $wh = new WatchHighloadBlock();
         return $wh->update($this->request["id"], $editData);
+    }
+
+    public function delete(){
+        global $USER;
+        $id = $this->request["id"];
+        $hlblock = HL\HighloadBlockTable::getById(self::AD_HL_ID)->fetch();
+        $entity = HL\HighloadBlockTable::compileEntity($hlblock);
+        $entity_data_class = $entity->getDataClass();
+
+        $el = $entity_data_class::getByPrimary($id, [
+            "select" => ["ID"],
+            "filter" => ["ID" => $id, "UF_USER_ID"=>$USER->GetID()]
+        ])->fetch();
+
+        if(!$el){
+            throw new AdNotFoundAuthException("Объявление не существует");
+        }
+
+        $watchTable = new WatchHighloadBlock();
+        return $watchTable->delete($id);
+    }
+
+    public function conditionTreeToArray(ConditionTree $conditionTree)
+    {
+        $logic = $conditionTree->logic();
+
+        $children = [];
+        foreach ($conditionTree->getConditions() as $child) {
+            if ($child instanceof Condition) {
+                // Если это ExpressionField, добавляем его как условие в массив
+                $children[] = [($child->hasMultiValues()?"=":"").$child->getColumn() => $child->getValue()];
+            } elseif ($child instanceof ConditionTree) {
+                // Если это другой ConditionTree, рекурсивно вызываем функцию для него
+                $children[] = $this->conditionTreeToArray($child);
+            }
+        }
+
+        return $children;
     }
 }
