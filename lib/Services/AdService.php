@@ -37,7 +37,7 @@ use Site\Api\Exceptions\PublishException;
 
 class AdService extends ServiceBase
 {
-    private const AD_HL_ID = 1;
+    public const AD_HL_ID = 1;
     public const POSTED = 44;
     public const MOVING = 45;
     public const MODERATED = 46;
@@ -574,7 +574,7 @@ class AdService extends ServiceBase
         $hlblock = HL\HighloadBlockTable::getById(self::AD_HL_ID)->fetch();
         $entity = HL\HighloadBlockTable::compileEntity($hlblock);
         $entity_data_class = $entity->getDataClass();
-
+        $serverHost = (Context::getCurrent()->getRequest()->isHttps()?"https://":"http://").Context::getCurrent()->getServer()->getHttpHost();
         $el = $entity_data_class::getByPrimary($id, [
             "select" => [
                 "ID", 'photo'=>"UF_FOTO", "brand|ID"=>"brand_alias.ID",
@@ -594,9 +594,14 @@ class AdService extends ServiceBase
                 "dial_color|ID"=>"dial_color_alias.ID", "dial_color|NAME"=>"dial_color_alias.NAME",
                 "water_protection|ID"=>"water_protection_alias.ID", "water_protection|NAME"=>"water_protection_alias.VALUE",
                 "description"=>"UF_DESC", "date_created"=>"UF_CREATE_DATE",
-                "seller_type|ID"=>"seller_type_alias.ID", "seller_type_alias|NAME"=>"seller_type_alias.VALUE",
+                "seller_type|ID"=>"seller_type_alias.ID", "seller_type|NAME"=>"seller_type_alias.VALUE",
                 "user|id"=>"user_alias.ID", "user|name"=>"user_alias.NAME",
-                "user|city"=>"user_alias.PERSONAL_CITY", ],
+                "user|city"=>"user_alias.PERSONAL_CITY", "user|photo" => "FULL_PATH",
+                "documents_list|ID" => "documents_list_alias.ID", "documents_list|NAME" => "documents_list_alias.NAME",
+                "documents_description" => "UF_AVAILABILITY_OF_DOCUMENTS_TXT", "video" => "UF_VIDEO",
+                "promotion" => "UF_PROMOT",
+                "promotion_type|ID" => "promotion_type_alias.ID", "promotion_type|NAME" => "promotion_type_alias.NAME",
+                "status|ID" => "status_alias.ID", "status|NAME" => "status_alias.VALUE"],
             "runtime" => [
                 "brand_alias" => [
                     "data_type" => Iblock::wakeUp(1)->getEntityDataClass(),
@@ -709,12 +714,40 @@ class AdService extends ServiceBase
                         "=this.UF_USER_ID"=>"ref.ID"
                     ],
                     ["join_type"=>"left"]
-                ]
+                ],
+                "documents_list_alias" => [
+                    "data_type" => Iblock::wakeUp(9)->getEntityDataClass(),
+                    "reference" => [
+                        "=this.UF_AVAILABILITY_OF_DOCUMENTS" => "ref.ID"
+                    ],
+                    ["join_type"=>"left"]
+                ],
+                "promotion_type_alias" => [
+                    "data_type" => Iblock::wakeUp(6)->getEntityDataClass(),
+                    "reference" => [
+                        "=this.UF_PROMOTION" => "ref.ID"
+                    ],
+                    ["join_type"=>"left"]
+                ],
+                "status_alias" => [
+                    "data_type" => UserFieldEnumTable::class,
+                    "reference" => [
+                        "=this.UF_STATUS" => "ref.ID"
+                    ],
+                    ["join_type"=>"left"]
+                ],
+                "user_photo" => [
+                    "data_type" => FileTable::class,
+                    "reference" => [
+                        "=this.user_alias.PERSONAL_PHOTO" => "ref.ID"
+                    ],
+                    ['join_type' => 'left']
+                ],
+                new ExpressionField('FULL_PATH', 'CONCAT("'.$serverHost.'/upload/", %s, "/", %s)', ["user_photo.SUBDIR", "user_photo.FILE_NAME"])
             ]
         ])->fetch();
         if(!$el) return null;
         if(count($el['photo'])){
-            $serverHost = (Context::getCurrent()->getRequest()->isHttps()?"https://":"http://").Context::getCurrent()->getServer()->getHttpHost();
             $files = FileTable::getList([
                 "select"=>["ID","FULL_PATH"],
                 "filter"=>["=ID"=>$el["photo"]],

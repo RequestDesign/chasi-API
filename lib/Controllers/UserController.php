@@ -6,6 +6,7 @@ include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/DeleteAccClass.php");
 include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/EditAvatarClass.php");
 include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/EditDataClass.php");
 include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/EditPassClass.php");
+include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/ChangeEmail1Class.php");
 
 use Bitrix\Main\Context;
 use Bitrix\Main\DI\ServiceLocator;
@@ -26,6 +27,7 @@ use DeleteAccClass;
 use EditAvatarClass;
 use EditDataClass;
 use EditPassClass;
+use ChangeEmail1Class;
 
 /**
  * UserController class
@@ -78,7 +80,8 @@ class UserController extends Controller
                 "+prefilters" => [
                     new Validator([
                         (new Validation("id"))->required()->number(),
-                        (new Validation("newPassword"))->password()
+                        (new Validation("newPassword"))->password(),
+                        (new Validation("email"))->email()
                     ]),
                     new Authentication()
                 ]
@@ -86,6 +89,9 @@ class UserController extends Controller
             "getCurrentUser" => [
                 "+prefilters" => [
                     new Authentication()
+                ],
+                "+postfilters" => [
+                    new ChangeKeyCase()
                 ]
             ]
         ];
@@ -171,7 +177,7 @@ class UserController extends Controller
     {
         $request = $this->getRequest()->toArray();
         $hasErrors = false;
-        $user = UserTable::getByPrimary($this->getCurrentUser()->getId(), ["select"=>["NAME", "PERSONAL_CITY", "PERSONAL_BIRTHDAY", "PERSONAL_GENDER"]]);
+        $user = UserTable::getByPrimary($this->getCurrentUser()->getId(), ["select"=>["NAME", "PERSONAL_CITY", "PERSONAL_BIRTHDAY", "PERSONAL_GENDER"]])->fetch();
         if(isset($request["photo"])){
             $errors = [];
             $res = EditAvatarClass::EditAvatarClassMethod($request["id"], $request["photo"], $errors);
@@ -221,6 +227,40 @@ class UserController extends Controller
                 }
             }
         }
+        /*if(isset($request["email"])){
+            $errors = [];
+            $res = ChangeEmail1Class::ChangeEmail1ClassMethod($this->getCurrentUser()->getId(), $request["email"], $errors);
+            if(!$res){
+                foreach($errors as $error_key => $error_message){
+                    switch ($error_key){
+                        case 'NEW_PASSWORD':{
+                            $this->addError(new Error(
+                                "Новый пароль не совпадает с подтверждением",
+                                "passwords_illegal"
+                            ));
+                            $hasErrors = true;
+                            break;
+                        }
+                        case "CURRENT_PASSWORD":{
+                            $this->addError(new Error(
+                                "Текущий пароль неверный",
+                                "old_password_illegal"
+                            ));
+                            $hasErrors = true;
+                            break;
+                        }
+                        case 'userExists':{
+                            $this->addError(new Error(
+                                "Пользователь не найден",
+                                "illegal_user"
+                            ));
+                            $hasErrors = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }*/
         if(isset($request["oldPassword"]) || isset($request["newPassword"]) || isset($request["confirmPassword"])){
             if(!isset($request["oldPassword"])){
                 $hasErrors = true;

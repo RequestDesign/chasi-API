@@ -4,6 +4,10 @@ require_once($_SERVER['DOCUMENT_ROOT']."/ajax/class/RegEmailClass.php");
 require_once($_SERVER['DOCUMENT_ROOT']."/ajax/class/RegEmail2Class.php");
 require_once($_SERVER['DOCUMENT_ROOT']."/ajax/class/RegEmail3Class.php");
 
+use Bitrix\Main\Loader;
+
+Loader::includeModule('highloadblock');
+use Bitrix\Highloadblock\HighloadBlockTable;
 use Bitrix\Main\Application;
 use Bitrix\Main\Context;
 use Bitrix\Main\FileTable;
@@ -80,11 +84,12 @@ class UserService
                     'ACTIVE',
                     'NAME',
                     'LAST_NAME',
-                    'phone'=>'PERSONAL_PHONE',
+                    'phone'=>'PERSONAL_MOBILE',
                     'city'=>'PERSONAL_CITY',
                     "photo" => "FULL_PATH",
                     "birthday" => "PERSONAL_BIRTHDAY",
-                    "gender" => "PERSONAL_GENDER"
+                    "gender" => "PERSONAL_GENDER",
+                    "date_created" => "DATE_REGISTER",
                 ],
                 "runtime" => [
                     "photo_alias" => [
@@ -94,11 +99,26 @@ class UserService
                         ],
                         ["join_type" => "left"]
                     ],
-                    new ExpressionField('FULL_PATH', 'CONCAT("'.$serverHost.'/upload/", %s, "/", %s)', ["photo_alias.SUBDIR", "photo_alias.FILE_NAME"])
+                    new ExpressionField('FULL_PATH', 'CONCAT("'.$serverHost.'/upload/", %s, "/", %s)', ["photo_alias.SUBDIR", "photo_alias.FILE_NAME"]),
                 ]
             ]
         )->fetch();
-
+        if ($user) {
+            $hlblock = HighloadBlockTable::getById(AdService::AD_HL_ID)->fetch();
+            $entity = HighloadBlockTable::compileEntity($hlblock);
+            $entity_data_class = $entity->getDataClass();
+            $res = $entity_data_class::getList([
+                "select" => ["CNT"],
+                "filter" => [
+                    "UF_USER_ID" => $user["ID"],
+                    "=UF_STATUS" => [AdService::POSTED, AdService::MOVING]
+                ],
+                "runtime" => [
+                    new ExpressionField("CNT", "COUNT(*)")
+                ]
+            ])->fetch();
+            $user["ads_count"] = $res["CNT"];
+        }
         return $user;
     }
 }

@@ -40,7 +40,6 @@ class Routes
             $routes->get('users/{id}', [UserController::class, 'getOne']);
             $routes->delete('users', [UserController::class, 'delete']);
             $routes->post('users/{id}', [UserController::class, 'edit']);
-            $routes->get('users/{id}/reviews', [ReviewController::class, 'getList']);
             $routes->get('user', [UserController::class, 'getCurrentUser']);
             $routes->get('user/ads/waiting', [AdController::class, 'getWaiting']);
             $routes->get('user/ads/drafts', [AdController::class, 'getDrafts']);
@@ -48,7 +47,12 @@ class Routes
             $routes->get('user/ads/archieve', [AdController::class, 'getArchieve']);
             $routes->patch('user/ads/{id}/publish', [AdController::class, 'publish']);
             $routes->patch('user/ads/{id}/archieve', [AdController::class, 'archieve']);
+
+            // отзывы
+            $routes->get('users/{id}/reviews', [ReviewController::class, 'getList']);
             $routes->patch('user/reviews', [ReviewController::class, 'getUserReviews']);
+            $routes->post('user/reviews', [ReviewController::class, 'create']);
+            $routes->get('review-ratings', [ReviewController::class, 'getReviewRatings']);
 
             // бренды
             $routes->get('brands', [BrandController::class, 'getList']);

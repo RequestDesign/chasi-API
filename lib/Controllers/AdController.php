@@ -138,7 +138,7 @@ class AdController extends Controller
         }
         catch(EditException $e){
             $this->addError(new Error($e->getMessage(), EditException::ELEMENT_DOESNT_EXIST));
-            http_response_code(400);
+            http_response_code(404);
             return new EventResult(EventResult::ERROR, null, null, $this);
         }
     }
