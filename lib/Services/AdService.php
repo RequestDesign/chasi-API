@@ -225,6 +225,7 @@ class AdService extends ServiceBase
             "ref_field" => "ID",
             "fields" => ["ID", "NAME"],
             "filter_type" => FilterType::ARRAY,
+            "filter_name" => "ID",
             "rule" => ModelRules::CREATE
         ),
         "documents_description" => array(
@@ -881,7 +882,9 @@ class AdService extends ServiceBase
         }
 
         $watchTable = new WatchHighloadBlock();
-        return $watchTable->delete($id);
+        $res = $watchTable->delete($id);
+        if ($res->isSuccess()) return $id;
+        else return $res;
     }
 
     public function conditionTreeToArray(ConditionTree $conditionTree)
@@ -892,7 +895,14 @@ class AdService extends ServiceBase
         foreach ($conditionTree->getConditions() as $child) {
             if ($child instanceof Condition) {
                 // Если это ExpressionField, добавляем его как условие в массив
-                $children[] = [($child->hasMultiValues()?"=":"").$child->getColumn() => $child->getValue()];
+                $prefix = "";
+                if($child->hasMultiValues()){
+                    $prefix = "=";
+                }
+                if(in_array($child->getOperator(), [">", ">=", "<", "<="])){
+                    $prefix = $child->getOperator();
+                }
+                $children[] = [$prefix.$child->getColumn() => $child->getValue()];
             } elseif ($child instanceof ConditionTree) {
                 // Если это другой ConditionTree, рекурсивно вызываем функцию для него
                 $children[] = $this->conditionTreeToArray($child);

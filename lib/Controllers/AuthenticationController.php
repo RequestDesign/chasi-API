@@ -6,6 +6,7 @@ require_once($_SERVER["DOCUMENT_ROOT"].'/ajax/class/RegEmail4Class.php');
 require_once($_SERVER["DOCUMENT_ROOT"].'/ajax/class/ForgotPassEmail1Class.php');
 require_once($_SERVER["DOCUMENT_ROOT"].'/ajax/class/ForgotPassEmail2Class.php');
 require_once($_SERVER["DOCUMENT_ROOT"].'/ajax/class/ForgotPassEmail3Class.php');
+require_once($_SERVER["DOCUMENT_ROOT"].'/ajax/class/ResendCodeClass.php');
 
 use Bitrix\Main\EventResult;
 use Bitrix\Main\Application;
@@ -21,6 +22,7 @@ use Site\Api\Services\Validation;
 use ForgotPassEmail1Class;
 use ForgotPassEmail2Class;
 use ForgotPassEmail3Class;
+use ResendCodeClass;
 
 /**
  * AuthenticationController

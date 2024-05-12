@@ -7,6 +7,7 @@ include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/EditAvatarClass.php");
 include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/EditDataClass.php");
 include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/EditPassClass.php");
 include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/ChangeEmail1Class.php");
+include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/ChangeEmail2Class.php");
 
 use Bitrix\Main\Context;
 use Bitrix\Main\DI\ServiceLocator;
@@ -28,6 +29,7 @@ use EditAvatarClass;
 use EditDataClass;
 use EditPassClass;
 use ChangeEmail1Class;
+use ChangeEmail2Class;
 
 /**
  * UserController class
@@ -92,6 +94,16 @@ class UserController extends Controller
                 ],
                 "+postfilters" => [
                     new ChangeKeyCase()
+                ]
+            ],
+            "confirmEmail" => [
+                "+prefilters" => [
+                    new Authentication()
+                ],
+                "postfilters" => [
+                    new Validator([
+                        (new Validation('code'))->number()->required()
+                    ])
                 ]
             ]
         ];
@@ -178,6 +190,11 @@ class UserController extends Controller
         $request = $this->getRequest()->toArray();
         $hasErrors = false;
         $user = UserTable::getByPrimary($this->getCurrentUser()->getId(), ["select"=>["NAME", "PERSONAL_CITY", "PERSONAL_BIRTHDAY", "PERSONAL_GENDER"]])->fetch();
+        if($this->getCurrentUser()->getId() != $request["id"]){
+            $this->addError(new Error("У Вас нет прав для редактирования других пользователей", "wrong_roots"));
+            http_response_code(400);
+            return new EventResult(EventResult::ERROR, null, "site.api", $this);
+        }
         if(isset($request["photo"])){
             $errors = [];
             $res = EditAvatarClass::EditAvatarClassMethod($request["id"], $request["photo"], $errors);
@@ -227,32 +244,24 @@ class UserController extends Controller
                 }
             }
         }
-        /*if(isset($request["email"])){
+        if(isset($request["email"])){
             $errors = [];
-            $res = ChangeEmail1Class::ChangeEmail1ClassMethod($this->getCurrentUser()->getId(), $request["email"], $errors);
+            $res = ChangeEmail1Class::ChangeEmail1ClassMethod($request["email"], $errors);
             if(!$res){
                 foreach($errors as $error_key => $error_message){
                     switch ($error_key){
-                        case 'NEW_PASSWORD':{
+                        case 'invalidEmail':{
                             $this->addError(new Error(
-                                "Новый пароль не совпадает с подтверждением",
-                                "passwords_illegal"
+                                "Данный email некорректен",
+                                "invalid_email"
                             ));
                             $hasErrors = true;
                             break;
                         }
-                        case "CURRENT_PASSWORD":{
+                        case "changeEmailInput":{
                             $this->addError(new Error(
-                                "Текущий пароль неверный",
-                                "old_password_illegal"
-                            ));
-                            $hasErrors = true;
-                            break;
-                        }
-                        case 'userExists':{
-                            $this->addError(new Error(
-                                "Пользователь не найден",
-                                "illegal_user"
+                                "Данный email уже привязан к аккаунту",
+                                "busy_email"
                             ));
                             $hasErrors = true;
                             break;
@@ -260,7 +269,7 @@ class UserController extends Controller
                     }
                 }
             }
-        }*/
+        }
         if(isset($request["oldPassword"]) || isset($request["newPassword"]) || isset($request["confirmPassword"])){
             if(!isset($request["oldPassword"])){
                 $hasErrors = true;
@@ -323,6 +332,36 @@ class UserController extends Controller
             return new EventResult(EventResult::ERROR, null, "site.api", $this);
         }
         else return [];
+    }
+
+    public function confirmEmailAction()
+    {
+        $request = $this->getRequest()->toArray();
+        $errors = [];
+        $res = ChangeEmail2Class::ChangeEmail2ClassMethod($request["code"], $errors);
+        if(!$res){
+            foreach($errors as $error_key => $error_message){
+                switch ($error_key){
+                    case 'codeEmailInput':{
+                        $this->addError(new Error(
+                            "Неверный код подтверждения",
+                            "illegal_code"
+                        ));
+                        break;
+                    }
+                    case 'existUser':{
+                        $this->addError(new Error(
+                            "Пользователь не найден",
+                            "illegal_user"
+                        ));
+                        break;
+                    }
+                }
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, "site.api", $this);
+            }
+        }
+        return [];
     }
 
     protected function reArrayFiles(&$file_post){

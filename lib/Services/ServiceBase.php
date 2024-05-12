@@ -83,6 +83,7 @@ class ServiceBase
         $sort = [];
         $self = get_called_class();
         $sortConventer = new Converter(Converter::TO_SNAKE|Converter::TO_UPPER);
+        $fieldConventer = new Converter(Converter::TO_SNAKE|Converter::TO_LOWER);
         if(array_key_exists('sort', $this->request)){
             $sortParams = explode(',', $this->request['sort']);
             if(is_array($sortParams) && count($sortParams)){
@@ -99,6 +100,7 @@ class ServiceBase
             }
         }
         foreach($sort as $sort_field=>$direction){
+            $sort_field = $fieldConventer->process($sort_field);
             if(array_key_exists($sort_field, $self::FIELDS) && in_array($direction, self::SORT_DIRECTIONS, true))
             {
                 if(array_key_exists("field", $self::FIELDS[$sort_field])){
@@ -150,7 +152,6 @@ class ServiceBase
                     $op = $matches[1];
                 }
                 $filter_key = $converter->process($key);
-
                 if(!array_key_exists($filter_key, $self::FIELDS)){
                     throw new FilterException("Параметр ".$key." не существует");
                 }

@@ -47,6 +47,7 @@ class Routes
             $routes->get('user/ads/archieve', [AdController::class, 'getArchieve']);
             $routes->patch('user/ads/{id}/publish', [AdController::class, 'publish']);
             $routes->patch('user/ads/{id}/archieve', [AdController::class, 'archieve']);
+            $routes->post('user/confirm-email', [UserController::class, 'confirmEmail']);
 
             // отзывы
             $routes->get('users/{id}/reviews', [ReviewController::class, 'getList']);
@@ -64,7 +65,7 @@ class Routes
             $routes->get('ads-create-values', [AdController::class, 'getCreateValues']);
             $routes->get('filter', [AdController::class, 'getFilter']);
             $routes->get('ads/{id}', [AdController::class, 'getOne']);
-            $routes->put('ads/{id}', [AdController::class, 'edit']);
+            $routes->post('ads/{id}', [AdController::class, 'edit']);
             $routes->delete('ads/{id}', [AdController::class, 'delete']);
 
             // рекламы

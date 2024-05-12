@@ -8,6 +8,7 @@ use \Bitrix\Main\Engine\Controller;
 use Bitrix\Main\Entity\AddResult;
 use Bitrix\Main\Error;
 use Bitrix\Main\EventResult;
+use Bitrix\Main\ORM\Data\DeleteResult;
 use Bitrix\Main\Response;
 use Bitrix\Main\Web\Json;
 use Site\Api\Exceptions\AdNotFoundAuthException;
@@ -243,13 +244,13 @@ class AdController extends Controller
         $adService = $serviceLocator->get("site.api.ad");
         try{
             $res = $adService->delete();
-            if(!$res->isSuccess()){
+            if($res instanceof DeleteResult){
                 foreach($res->getErrors() as $error){
                     $this->addError($error);
                 }
                 return new EventResult(EventResult::ERROR, null, null, $this);
             }
-            return ["id" => $res->getId()];
+            return ["id" => $res];
         }
         catch (\Exception $e){
             if($e instanceof AdNotFoundAuthException) {
