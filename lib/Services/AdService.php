@@ -865,6 +865,43 @@ class AdService extends ServiceBase
         return $wh->update($this->request["id"], $editData);
     }
 
+    public function promote(){
+        global $USER;
+        $id = $this->request["id"];
+        $hlblock = HL\HighloadBlockTable::getById(self::AD_HL_ID)->fetch();
+        $entity = HL\HighloadBlockTable::compileEntity($hlblock);
+        $entity_data_class = $entity->getDataClass();
+
+        $el = $entity_data_class::getByPrimary($id, [
+            "select" => ["ID", "UF_STATUS", "STATUS_NAME"=>"UF_STATUS_ALIAS.VALUE" ],
+            "filter" => ["ID" => $id, "UF_USER_ID"=>$USER->GetID()],
+            "runtime" => [
+                "UF_STATUS_ALIAS" => [
+                    "data_type" => UserFieldEnumTable::class,
+                    "reference" => [
+                        "=this.UF_STATUS" => "ref.ID",
+                    ],
+                    ["join_type"=>"left"]
+                ],
+            ]
+        ])->fetch();
+
+        if(!$el){
+            throw new AdNotFoundAuthException("Объявление не существует");
+        }
+
+        if(!in_array($el["UF_STATUS"], [self::POSTED])){
+            throw new PublishException("Нельзя продвигать объявление со статусом \"{$el["STATUS_NAME"]}\"");
+        }
+        $editData = [
+            "UF_STATUS" => self::UNPAYED,
+            "UF_PROMOT" => "Y",
+            "UF_PROMOTION" => $this->request["promotionType"]
+        ];
+        $wh = new WatchHighloadBlock();
+        return $wh->update($this->request["id"], $editData);
+    }
+
     public function delete(){
         global $USER;
         $id = $this->request["id"];

@@ -3,6 +3,7 @@
 namespace Site\Api\Controllers;
 
 require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/AddReviewClass.php");
+require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/DeleteReviewClass.php");
 
 use Bitrix\Iblock\PropertyTable;
 use Bitrix\Main\Loader;
@@ -16,6 +17,7 @@ use Bitrix\Main\Engine\Controller;
 use Bitrix\Main\Error;
 use Bitrix\Main\EventResult;
 use Bitrix\Main\Response;
+use Bitrix\Main\UserTable;
 use Bitrix\Main\Web\Json;
 use Site\Api\Exceptions\FilterException;
 use Site\Api\Postfilters\ChangeKeyCase;
@@ -24,6 +26,7 @@ use Site\Api\Prefilters\Csrf;
 use Site\Api\Prefilters\Validator;
 use Site\Api\Services\Validation;
 use AddReviewClass;
+use DeleteReviewClass;
 
 class ReviewController extends Controller
 {
@@ -128,6 +131,41 @@ class ReviewController extends Controller
         }
         return array_values($resultRatings);
     }
+
+    public function deleteAction(){
+        $request = $this->getRequest()->toArray();
+        $review = Iblock::wakeUp(4)->getEntityDataClass()::getList([
+            "select" => ["ID"],
+            "filter" => [
+                "OT_KOGO.VALUE" => $this->getCurrentUser()->getId(),
+                "ID"=>$request["id"]
+            ]
+        ])->fetch();
+        if(!$review){
+            $this->addError(new Error("У Вас нет прав для удаления чужих отзывов", "wrong_roots"));
+            http_response_code(400);
+            return new EventResult(EventResult::ERROR, null, "site.api", $this);
+        }
+        $errors = [];
+        $res = DeleteReviewClass::DeleteReviewClassMethod($this->getCurrentUser()->getId(), $request["id"], $errors);
+        if(!$res){
+            foreach($errors as $error_key => $error_message){
+                switch ($error_key){
+                    case 'userExists':{
+                        $this->addError(new Error(
+                            "Пользователь не найден",
+                            "illegal_user"
+                        ));
+                        break;
+                    }
+                }
+            }
+            http_response_code(400);
+            return new EventResult(EventResult::ERROR, null, "site.api", $this);
+        }
+        return ["id" => $res];
+    }
+
     protected function getDefaultPreFilters():array
     {
         return [
@@ -177,6 +215,14 @@ class ReviewController extends Controller
                 "postfilters" => [
                     new RecursiveResponseList(),
                     new ChangeKeyCase()
+                ]
+            ],
+            "delete" => [
+                "+prefilters" => [
+                    new Authentication(),
+                    new Validator([
+                        (new Validation('id'))->number()->required()
+                    ])
                 ]
             ]
         ];

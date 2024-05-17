@@ -2,6 +2,9 @@
 
 namespace Site\Api\Controllers;
 
+require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/ListFavouritesClass.php");
+require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/FavouritesClass.php");
+
 use Bitrix\Main\DI\ServiceLocator;
 use Bitrix\Main\Engine\ActionFilter\Authentication;
 use \Bitrix\Main\Engine\Controller;
@@ -23,6 +26,8 @@ use Site\Api\Prefilters\Csrf;
 use Site\Api\Prefilters\EditAd;
 use Site\Api\Prefilters\Validator;
 use Site\Api\Services\Validation;
+use ListFavouritesClass;
+use FavouritesClass;
 
 class AdController extends Controller
 {
@@ -237,6 +242,33 @@ class AdController extends Controller
             }
         }
     }
+
+    public function promoteAction(){
+        $serviceLocator = ServiceLocator::getInstance();
+        $adService = $serviceLocator->get("site.api.ad");
+        try {
+            $res = $adService->promote();
+            if(!$res->isSuccess()){
+                foreach($res->getErrors() as $error){
+                    $this->addError($error);
+                }
+                return new EventResult(EventResult::ERROR, null, null, $this);
+            }
+            return ["id" => $res->getId()];
+        }
+        catch (\Exception $e){
+            if($e instanceof AdNotFoundAuthException) {
+                $this->addError(new Error($e->getMessage(), AdNotFoundAuthException::AD_NOT_FOUND));
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, null, $this);
+            }
+            if($e instanceof PublishException){
+                $this->addError(new Error($e->getMessage(), PublishException::ILLEGAL_STATUS));
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, null, $this);
+            }
+        }
+    }
     
     public function deleteAction() 
     {
@@ -259,6 +291,39 @@ class AdController extends Controller
                 return new EventResult(EventResult::ERROR, null, null, $this);
             }
         }
+    }
+
+    public function favoritesAction(){
+        $favorites = ListFavouritesClass::ListFavouritesClassMethod();
+        if(!$favorites) return [];
+        $params = [
+            "filter" => [
+                ["ID", "in", $favorites]
+            ]
+        ];
+        return $this->getListAction($params);
+    }
+
+    public function toggleFavoritesAction(){
+        $request = $this->getRequest()->toArray();
+        $errors = [];
+        $res = FavouritesClass::FavouritesClassMethod($request["id"], $errors);
+        if(!$res){
+            foreach($errors as $error_key => $error_message){
+                switch ($error_key){
+                    case 'idExists':{
+                        $this->addError(new Error(
+                            "Неверный id объявления",
+                            "wrong_id"
+                        ));
+                        break;
+                    }
+                }
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, "site.api", $this);
+            }
+        }
+        return [];
     }
 
     protected function getDefaultPreFilters():array
@@ -424,6 +489,15 @@ class AdController extends Controller
                     ])
                 ]
             ],
+            "promote" => [
+                "+prefilters" => [
+                    new Authentication(),
+                    new Validator([
+                        (new Validation("id"))->required()->number(),
+                        (new Validation("promotionType"))->required()->number()
+                    ])
+                ]
+            ],
             "delete" => [
                 "+prefilters" => [
                     new Authentication(),
@@ -431,6 +505,19 @@ class AdController extends Controller
                         (new Validation("id"))->required()->number()
                     ])
                 ]
+            ],
+            "favorites" => [
+                "postfilters" => [
+                    new RecursiveResponseList(),
+                    new ChangeKeyCase()
+                ]
+            ],
+            "toggleFavorites" => [
+                "+prefilters" => [
+                    new Validator([
+                        (new Validation("id"))->number()->required()
+                    ])
+                ],
             ]
         ];
     }

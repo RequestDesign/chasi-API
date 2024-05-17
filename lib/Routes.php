@@ -47,13 +47,17 @@ class Routes
             $routes->get('user/ads/archieve', [AdController::class, 'getArchieve']);
             $routes->patch('user/ads/{id}/publish', [AdController::class, 'publish']);
             $routes->patch('user/ads/{id}/archieve', [AdController::class, 'archieve']);
+            $routes->post('user/ads/{id}/promote', [AdController::class, 'promote']);
             $routes->post('user/confirm-email', [UserController::class, 'confirmEmail']);
+            $routes->get('favorites', [AdController::class, 'favorites']);
+            $routes->post('favorites/{id}', [AdController::class, 'toggleFavorites']);
 
             // отзывы
             $routes->get('users/{id}/reviews', [ReviewController::class, 'getList']);
-            $routes->patch('user/reviews', [ReviewController::class, 'getUserReviews']);
+            $routes->get('user/reviews', [ReviewController::class, 'getUserReviews']);
             $routes->post('user/reviews', [ReviewController::class, 'create']);
             $routes->get('review-ratings', [ReviewController::class, 'getReviewRatings']);
+            $routes->delete('reviews/{id}', [ReviewController::class, 'delete']);
 
             // бренды
             $routes->get('brands', [BrandController::class, 'getList']);

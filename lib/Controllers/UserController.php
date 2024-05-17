@@ -172,6 +172,11 @@ class UserController extends Controller
     public function deleteAction(): array|EventResult
     {
         $request = $this->getRequest()->toArray();
+        if($this->getCurrentUser()->getId() && $this->getCurrentUser()->getId() != $request["id"]){
+            $this->addError(new Error("У Вас нет прав для удаления других пользователей", "wrong_roots"));
+            http_response_code(400);
+            return new EventResult(EventResult::ERROR, null, "site.api", $this);
+        }
         $errors = [];
         $res = DeleteAccClass::DeleteAccClassMethod($request["id"], $errors);
         if($res){

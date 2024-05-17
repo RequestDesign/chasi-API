@@ -84,7 +84,8 @@ class AuthenticationController extends Controller
             'sendConfirmCode' => [
                 'postfilters' => [
                     new Validator([
-                        (new Validation('id'))->number()
+                        (new Validation('email'))->email(),
+                        (new Validation('phone'))->number()
                     ])
                 ]
             ],
@@ -119,7 +120,7 @@ class AuthenticationController extends Controller
                 http_response_code(403);
                 return new EventResult(EventResult::ERROR, null, 'site.api', $this);
             }
-            return ["id"=>$this->getCurrentUser()->getId()];
+            return ["id"=>(int)$this->getCurrentUser()->getId()];
         }
         else if(array_key_exists("phone", $request)){
             \LoginEmail::LoginEmailMethod($request["phone"], $request["password"], $errors);
@@ -131,7 +132,7 @@ class AuthenticationController extends Controller
                 http_response_code(400);
                 return new EventResult(EventResult::ERROR, null, 'site.api', $this);
             }
-            return [];
+            return ["id"=>(int)$this->getCurrentUser()->getId()];
         }
         $this->addError(new Error(
             "Не указаны данные",
@@ -265,23 +266,40 @@ class AuthenticationController extends Controller
     }
 
     public function sendConfirmCodeAction(){
-        global $USER;
         $request = $this->getRequest()->toArray();
-        $user = $USER->GetByID($request["id"])->Fetch();
-        if ($user){
-            $confirmationCode = randString(8);
-            $USER->Update($user["ID"], array("CONFIRM_CODE" => $confirmationCode));
-
-            // Отправка шаблона письма - Подтверждение регистрации нового пользователя [NEW_USER_CONFIRM]
-            \CEvent::Send("NEW_USER_CONFIRM", "s1", array("EMAIL" => $user["EMAIL"], "ID" => $user["ID"], "CONFIRM_CODE" => $confirmationCode));
-            return [];
+        if(empty($request["email"]) && empty($request["phone"])){
+            $this->addError(new Error(
+                "Одно из полей - 'email' или 'phone' должно быть обязательным",
+                PhoneEmailException::ERROR_REQUIRED
+            ));
+            http_response_code(400);
+            return new EventResult(EventResult::ERROR, null, 'site.api', $this);
         }
-        $this->addError(new Error(
-            "Пользователь не существует",
-            "user_does_not_exist"
-        ));
-        http_response_code(400);
-        return new EventResult(EventResult::ERROR, null, 'site.api', $this);
+        $errors = [];
+        $res = ResendCodeClass::ResendCodeMethod($request["email"] ?? null, $request["phone"] ?? null, $errors);
+        if(!$res){
+            foreach($errors as $error_key => $error_message){
+                switch ($error_key){
+                    case 'userActive':{
+                        $this->addError(new Error(
+                            "Пользователь уже активирован",
+                            "illegal_email_or_phone"
+                        ));
+                        break;
+                    }
+                    case 'regCode':{
+                        $this->addError(new Error(
+                            "Пользователь не найден",
+                            "illegal_user"
+                        ));
+                        break;
+                    }
+                }
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, "site.api", $this);
+            }
+        }
+        return [];
     }
 
     /**
