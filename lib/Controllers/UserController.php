@@ -8,6 +8,9 @@ include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/EditDataClass.php");
 include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/EditPassClass.php");
 include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/ChangeEmail1Class.php");
 include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/ChangeEmail2Class.php");
+include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/DeleteAvatarClass.php");
+include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/EditPhone1Class.php");
+include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/EditPhone2Class.php");
 
 use Bitrix\Main\Context;
 use Bitrix\Main\DI\ServiceLocator;
@@ -30,6 +33,9 @@ use EditDataClass;
 use EditPassClass;
 use ChangeEmail1Class;
 use ChangeEmail2Class;
+use DeleteAvatarClass;
+use EditPhone1Class;
+use EditPhone2Class;
 
 /**
  * UserController class
@@ -83,7 +89,8 @@ class UserController extends Controller
                     new Validator([
                         (new Validation("id"))->required()->number(),
                         (new Validation("newPassword"))->password(),
-                        (new Validation("email"))->email()
+                        (new Validation("email"))->email(),
+                        (new Validation("phone"))->number()
                     ]),
                     new Authentication()
                 ]
@@ -104,6 +111,21 @@ class UserController extends Controller
                     new Validator([
                         (new Validation('code'))->number()->required()
                     ])
+                ]
+            ],
+            "confirmPhone" => [
+                "+prefilters" => [
+                    new Authentication()
+                ],
+                "postfilters" => [
+                    new Validator([
+                        (new Validation('code'))->number()->required()
+                    ])
+                ]
+            ],
+            "deletePhoto" => [
+                "+prefilters" => [
+                    new Authentication()
                 ]
             ]
         ];
@@ -332,6 +354,24 @@ class UserController extends Controller
                 }
             }
         }
+        if(isset($request["phone"])){
+            $errors = [];
+            $res = EditPhone1Class::EditPhone1ClassMethod($this->getCurrentUser()->getId(), $request["phone"], $errors);
+            if(!$res){
+                foreach($errors as $error_key => $error_message){
+                    switch ($error_key){
+                        case 'newPhone':{
+                            $this->addError(new Error(
+                                "Данный номер телефона уже занят",
+                                "wrong_phone"
+                            ));
+                            $hasErrors = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
         if($hasErrors){
             http_response_code(400);
             return new EventResult(EventResult::ERROR, null, "site.api", $this);
@@ -355,6 +395,57 @@ class UserController extends Controller
                         break;
                     }
                     case 'existUser':{
+                        $this->addError(new Error(
+                            "Пользователь не найден",
+                            "illegal_user"
+                        ));
+                        break;
+                    }
+                }
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, "site.api", $this);
+            }
+        }
+        return [];
+    }
+
+    /*public function confirmPhoneAction()
+    {
+        $request = $this->getRequest()->toArray();
+        $errors = [];
+        $res = EditPhone2Class::EditPhone2ClassMethod($this->getCurrentUser()) ($request["code"], $errors);
+        if(!$res){
+            foreach($errors as $error_key => $error_message){
+                switch ($error_key){
+                    case 'codeEmailInput':{
+                        $this->addError(new Error(
+                            "Неверный код подтверждения",
+                            "illegal_code"
+                        ));
+                        break;
+                    }
+                    case 'existUser':{
+                        $this->addError(new Error(
+                            "Пользователь не найден",
+                            "illegal_user"
+                        ));
+                        break;
+                    }
+                }
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, "site.api", $this);
+            }
+        }
+        return [];
+    }*/
+
+    public function deletePhotoAction(){
+        $errors = [];
+        $res = DeleteAvatarClass::DeleteAvatarClassMethod($errors);
+        if(!$res){
+            foreach($errors as $error_key => $error_message){
+                switch ($error_key){
+                    case 'userExists':{
                         $this->addError(new Error(
                             "Пользователь не найден",
                             "illegal_user"

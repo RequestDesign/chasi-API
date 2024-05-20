@@ -41,6 +41,7 @@ class Routes
             $routes->delete('users', [UserController::class, 'delete']);
             $routes->post('users/{id}', [UserController::class, 'edit']);
             $routes->get('user', [UserController::class, 'getCurrentUser']);
+            $routes->delete('user/photo', [UserController::class, 'deletePhoto']);
             $routes->get('user/ads/waiting', [AdController::class, 'getWaiting']);
             $routes->get('user/ads/drafts', [AdController::class, 'getDrafts']);
             $routes->get('user/ads/active', [AdController::class, 'getActive']);
@@ -48,7 +49,9 @@ class Routes
             $routes->patch('user/ads/{id}/publish', [AdController::class, 'publish']);
             $routes->patch('user/ads/{id}/archieve', [AdController::class, 'archieve']);
             $routes->post('user/ads/{id}/promote', [AdController::class, 'promote']);
+            $routes->post('user/ads/{id}/pay', [AdController::class, 'pay']);
             $routes->post('user/confirm-email', [UserController::class, 'confirmEmail']);
+            //$routes->post('user/confirm-phone', [UserController::class, 'confirmPhone']);
             $routes->get('favorites', [AdController::class, 'favorites']);
             $routes->post('favorites/{id}', [AdController::class, 'toggleFavorites']);
 

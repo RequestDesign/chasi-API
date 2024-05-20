@@ -3,6 +3,8 @@
 namespace Site\Api\Services;
 
 require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/SearchDataClass.php");
+require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/CurrencyRateClass.php");
+require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/OrderClass.php");
 
 use Bitrix\Iblock\Iblock;
 use Bitrix\Main\Application;
@@ -15,7 +17,8 @@ use Bitrix\Main\UserFieldTable;
 use Bitrix\Main\UserTable;
 use Lib\HighloadBlock\WatchHighloadBlock;
 use \SearchDataClass;
-
+use CurrencyRateClass;
+use OrderClass;
 
 
 Loader::includeModule('highloadblock');
@@ -335,6 +338,39 @@ class AdService extends ServiceBase
         $createData["UF_TOWN"] = $city;
         $wh = new WatchHighloadBlock();
         return $wh->create($createData);
+    }
+
+    public function getPayUrl($id){
+        global $USER;
+        $hlblock = HL\HighloadBlockTable::getById(self::AD_HL_ID)->fetch();
+        $entity = HL\HighloadBlockTable::compileEntity($hlblock);
+        $entity_data_class = $entity->getDataClass();
+        $el = $entity_data_class::getByPrimary($id, [
+            "select" => [
+                "ID",
+                "UF_PROMOT",
+                "promotion_type_id" => "promotion_type_alias.ID",
+                "promotion_price" => "promotion_type_alias.PRICE.VALUE"
+            ],
+            "filter" => [
+                "UF_USER_ID" => $USER->GetID()
+            ],
+            "runtime" => [
+                "promotion_type_alias" => [
+                    "data_type" => Iblock::wakeUp(6)->getEntityDataClass(),
+                    "reference" => [
+                        "=this.UF_PROMOTION" => "ref.ID"
+                    ],
+                    ["join_type"=>"left"]
+                ]
+            ]
+        ])->fetch();
+        if(!$el) throw new AdNotFoundAuthException("Объявление не существует");
+        if($el["UF_PROMOT"] && $el["promotion_type_id"] && $el["promotion_price"]){
+            $errors = [];
+            return OrderClass::OrderClassMethod($USER->GetID(), $el["promotion_type_id"], $el["ID"], $errors);
+        }
+        return null;
     }
 
     public function edit():\Bitrix\Main\Entity\UpdateResult
@@ -773,6 +809,11 @@ class AdService extends ServiceBase
         ])->fetchAll();
         $el["more"] = array_column($moreEls, "ID");
         unset($el["brand_id"], $el["mechanism_id"]);
+        $currencies = CurrencyRateClass::GetCurrencyRate();
+        $el["currencies"] = [
+            "usd" => round(((float)$el["price"] / (float)$currencies["Valute"]["USD"]["Value"]), 2),
+            "eur" => round(((float)$el["price"] / (float)$currencies["Valute"]["EUR"]["Value"]), 2)
+        ];
         return $el;
     }
 
@@ -900,6 +941,42 @@ class AdService extends ServiceBase
         ];
         $wh = new WatchHighloadBlock();
         return $wh->update($this->request["id"], $editData);
+    }
+
+    public function pay(){
+        global $USER;
+        $id = $this->request["id"];
+        $hlblock = HL\HighloadBlockTable::getById(self::AD_HL_ID)->fetch();
+        $entity = HL\HighloadBlockTable::compileEntity($hlblock);
+        $entity_data_class = $entity->getDataClass();
+
+        $el = $entity_data_class::getByPrimary($id, [
+            "select" => ["ID", "UF_STATUS", "STATUS_NAME"=>"UF_STATUS_ALIAS.VALUE" ],
+            "filter" => ["ID" => $id, "UF_USER_ID"=>$USER->GetID()],
+            "runtime" => [
+                "UF_STATUS_ALIAS" => [
+                    "data_type" => UserFieldEnumTable::class,
+                    "reference" => [
+                        "=this.UF_STATUS" => "ref.ID",
+                    ],
+                    ["join_type"=>"left"]
+                ],
+            ]
+        ])->fetch();
+
+        if(!$el){
+            throw new AdNotFoundAuthException("Объявление не существует");
+        }
+
+        if(!in_array($el["UF_STATUS"], [self::UNPAYED])){
+            throw new PublishException("Нельзя продвигать объявление со статусом \"{$el["STATUS_NAME"]}\"");
+        }
+
+        $url = $this->getPayUrl($el["ID"]);
+        return [
+            "id" => $el["ID"],
+            "url" => $url ? $url : null
+        ];
     }
 
     public function delete(){

@@ -80,12 +80,20 @@ class AdController extends Controller
                 }
                 return new EventResult(EventResult::ERROR, null, null, $this);
             }
-            return ["id" => $res->getId()];
+            $url = $adService->getPayUrl($res->getId());
+            return ["id" => $res->getId(), "url" => $url ? $url : null];
         }
-        catch (CreateException $e){
-            $this->addError(new Error($e->getMessage(), CreateException::INVALID_CREATE_DATA, ["field"=>$e->getField()]));
-            http_response_code(400);
-            return new EventResult(EventResult::ERROR, null, null, $this);
+        catch (\Exception $e){
+            if($e instanceof AdNotFoundAuthException) {
+                $this->addError(new Error($e->getMessage(), AdNotFoundAuthException::AD_NOT_FOUND));
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, null, $this);
+            }
+            if($e instanceof CreateException){
+                $this->addError(new Error($e->getMessage(), CreateException::INVALID_CREATE_DATA, ["field"=>$e->getField()]));
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, null, $this);
+            }
         }
     }
 
@@ -254,7 +262,8 @@ class AdController extends Controller
                 }
                 return new EventResult(EventResult::ERROR, null, null, $this);
             }
-            return ["id" => $res->getId()];
+            $url = $adService->getPayUrl($res->getId());
+            return ["id" => $res->getId(), "url" => $url ? $url : null];
         }
         catch (\Exception $e){
             if($e instanceof AdNotFoundAuthException) {
@@ -264,6 +273,21 @@ class AdController extends Controller
             }
             if($e instanceof PublishException){
                 $this->addError(new Error($e->getMessage(), PublishException::ILLEGAL_STATUS));
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, null, $this);
+            }
+        }
+    }
+
+    public function payAction(){
+        $serviceLocator = ServiceLocator::getInstance();
+        $adService = $serviceLocator->get("site.api.ad");
+        try {
+            return $adService->pay();
+        }
+        catch (\Exception $e){
+            if($e instanceof AdNotFoundAuthException) {
+                $this->addError(new Error($e->getMessage(), AdNotFoundAuthException::AD_NOT_FOUND));
                 http_response_code(400);
                 return new EventResult(EventResult::ERROR, null, null, $this);
             }
@@ -495,6 +519,14 @@ class AdController extends Controller
                     new Validator([
                         (new Validation("id"))->required()->number(),
                         (new Validation("promotionType"))->required()->number()
+                    ])
+                ]
+            ],
+            "pay" => [
+                "+prefilters" => [
+                    new Authentication(),
+                    new Validator([
+                        (new Validation("id"))->required()->number()
                     ])
                 ]
             ],
