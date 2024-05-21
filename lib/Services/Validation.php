@@ -145,6 +145,12 @@ class Validation
         return $this;
     }
 
+    public function not_empty():Validation
+    {
+        $this->validate_params["not_empty"] = true;
+        return $this;
+    }
+
     /**
      * Возвращает параметр
      *

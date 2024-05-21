@@ -123,8 +123,8 @@ class AuthenticationController extends Controller
             return ["id"=>(int)$this->getCurrentUser()->getId()];
         }
         else if(array_key_exists("phone", $request)){
-            \LoginEmail::LoginEmailMethod($request["phone"], $request["password"], $errors);
-            if(array_key_exists("IllegalLogin", $errors)){
+            $res = \LoginEmail::LoginEmailMethod($request["phone"], $request["password"], $errors);
+            if(array_key_exists("IllegalLogin", $errors) || $res !== true){
                 $this->addError(new Error(
                     "Неверный логин или пароль",
                     self::ERROR_ILLEGAL_LOGIN_OR_PASSWORD

@@ -356,7 +356,7 @@ class UserController extends Controller
         }
         if(isset($request["phone"])){
             $errors = [];
-            $res = EditPhone1Class::EditPhone1ClassMethod($this->getCurrentUser()->getId(), $request["phone"], $errors);
+            $res = EditPhone1Class::EditPhone1ClassMethod($request["phone"], $errors);
             if(!$res){
                 foreach($errors as $error_key => $error_message){
                     switch ($error_key){
@@ -409,15 +409,15 @@ class UserController extends Controller
         return [];
     }
 
-    /*public function confirmPhoneAction()
+    public function confirmPhoneAction()
     {
         $request = $this->getRequest()->toArray();
         $errors = [];
-        $res = EditPhone2Class::EditPhone2ClassMethod($this->getCurrentUser()) ($request["code"], $errors);
+        $res = EditPhone2Class::EditPhone2ClassMethod($request["code"], $errors);
         if(!$res){
             foreach($errors as $error_key => $error_message){
                 switch ($error_key){
-                    case 'codeEmailInput':{
+                    case 'CONFIRM_CODE':{
                         $this->addError(new Error(
                             "Неверный код подтверждения",
                             "illegal_code"
@@ -437,7 +437,7 @@ class UserController extends Controller
             }
         }
         return [];
-    }*/
+    }
 
     public function deletePhotoAction(){
         $errors = [];

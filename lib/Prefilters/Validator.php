@@ -27,6 +27,7 @@ class Validator extends \Bitrix\Main\Engine\ActionFilter\Base
     public const ERROR_NOT_PRICE = 'not_price';
     public const ERROR_NOT_BOOL = 'not_bool';
     public const ERROR_FILE_SIZE = 'invalid_file_size';
+    public const ERROR_NOT_EMPTY = 'not_empty';
 
     protected array $validators;
     protected array $request;
@@ -240,6 +241,19 @@ class Validator extends \Bitrix\Main\Engine\ActionFilter\Base
                                     http_response_code(400);
                                     return new EventResult(EventResult::ERROR, null, 'site.api', $this);
                                 }
+                                break;
+                            }
+                            case 'not_empty':{
+                                if(empty($this->request[$field])){
+                                    $this->addError(new Error(
+                                        "Поле не должно быть пустым",
+                                        self::ERROR_NOT_EMPTY,
+                                        ["field"=>$field]
+                                    ));
+                                    http_response_code(400);
+                                    return new EventResult(EventResult::ERROR, null, 'site.api', $this);
+                                }
+                                break;
                             }
                         }
                     }

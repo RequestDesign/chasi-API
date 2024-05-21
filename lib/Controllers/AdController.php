@@ -4,6 +4,7 @@ namespace Site\Api\Controllers;
 
 require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/ListFavouritesClass.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/FavouritesClass.php");
+require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/SearchDataClass.php");
 
 use Bitrix\Main\DI\ServiceLocator;
 use Bitrix\Main\Engine\ActionFilter\Authentication;
@@ -28,6 +29,7 @@ use Site\Api\Prefilters\Validator;
 use Site\Api\Services\Validation;
 use ListFavouritesClass;
 use FavouritesClass;
+use SearchDataClass;
 
 class AdController extends Controller
 {
@@ -350,6 +352,18 @@ class AdController extends Controller
         return [];
     }
 
+    public function setSearchRequestsAction(){
+        $request = $this->getRequest()->toArray();
+        $errors = [];
+        SearchDataClass::SaveSearchClassData($request["q"], $errors);
+        return [];
+    }
+
+    public function getSearchRequestsAction(){
+        $res = SearchDataClass::GetSaveSearchData();
+        return $res ? $res : [];
+    }
+
     protected function getDefaultPreFilters():array
     {
         return [
@@ -550,6 +564,13 @@ class AdController extends Controller
                         (new Validation("id"))->number()->required()
                     ])
                 ],
+            ],
+            "setSearchRequests" => [
+                "+prefilters" => [
+                    new Validator([
+                        (new Validation("q"))->required()->not_empty()
+                    ])
+                ]
             ]
         ];
     }

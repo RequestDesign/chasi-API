@@ -64,8 +64,8 @@ class EditAd extends Base
         }
         if($ad["UF_STATUS"] == self::DRAFT_STATUS_ID){
             return (new Validator([
-                (new Validation("brand"))->number()->required(),
-                (new Validation("model"))->maxLength(255)->required(),
+                (new Validation("brand"))->number()->not_empty(),
+                (new Validation("model"))->maxLength(255)->not_empty(),
                 (new Validation("condition"))->number(),
                 (new Validation("gender"))->number(),
                 (new Validation("material"))->number(),
@@ -86,20 +86,20 @@ class EditAd extends Base
                 (new Validation("description"))->maxLength(200),
                 (new Validation("photo"))->image(3)->maxCount(10),
                 (new Validation("price"))->price(),
-                (new Validation("promotion"))->bool()->required(),
+                (new Validation("promotion"))->bool(),
                 (new Validation("promotionType"))->number()
             ]))->onBeforeAction($event);
         }
         else{
             return (new Validator([
-                (new Validation("brand"))->number()->required(),
-                (new Validation("model"))->required()->maxLength(255),
-                (new Validation("condition"))->required()->number(),
-                (new Validation("gender"))->required()->number(),
-                (new Validation("material"))->required()->number(),
-                (new Validation("watchband"))->required()->number(),
-                (new Validation("sellerType"))->required()->number(),
-                (new Validation("documentsList"))->required()->number(),
+                (new Validation("brand"))->number()->not_empty(),
+                (new Validation("model"))->maxLength(255)->not_empty(),
+                (new Validation("condition"))->number()->not_empty(),
+                (new Validation("gender"))->number()->not_empty(),
+                (new Validation("material"))->number()->not_empty(),
+                (new Validation("watchband"))->number()->not_empty(),
+                (new Validation("sellerType"))->number()->not_empty(),
+                (new Validation("documentsList"))->number()->not_empty(),
                 (new Validation("documentsDescription"))->maxLength(255),
                 (new Validation("year"))->number(),
                 (new Validation("mechanism"))->number(),
@@ -112,9 +112,9 @@ class EditAd extends Base
                 (new Validation("dialColor"))->number(),
                 (new Validation("waterProtection"))->number(),
                 (new Validation("description"))->maxLength(200),
-                (new Validation("photo"))->required()->image(3)->maxCount(10),
-                (new Validation("price"))->price()->required(),
-                (new Validation("promotion"))->required()->bool(),
+                (new Validation("photo"))->image(3)->maxCount(10),
+                (new Validation("price"))->price()->not_empty(),
+                (new Validation("promotion"))->bool(),
                 (new Validation("promotionType"))->number()
             ]))->onBeforeAction($event);
         }

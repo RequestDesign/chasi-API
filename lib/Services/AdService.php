@@ -5,6 +5,7 @@ namespace Site\Api\Services;
 require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/SearchDataClass.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/CurrencyRateClass.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/OrderClass.php");
+require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/ListFavouritesClass.php");
 
 use Bitrix\Iblock\Iblock;
 use Bitrix\Main\Application;
@@ -19,6 +20,7 @@ use Lib\HighloadBlock\WatchHighloadBlock;
 use \SearchDataClass;
 use CurrencyRateClass;
 use OrderClass;
+use ListFavouritesClass;
 
 
 Loader::includeModule('highloadblock');
@@ -320,6 +322,10 @@ class AdService extends ServiceBase
             }
         }
         $this->addPaginationParams($dbElements);
+        $favorites = ListFavouritesClass::ListFavouritesClassMethod();
+        foreach ($elements as &$element){
+            $element["favorite"] = in_array($element["ID"], $favorites);
+        }
         return $elements;
     }
 
@@ -523,6 +529,7 @@ class AdService extends ServiceBase
         $hlblock = HL\HighloadBlockTable::getById(self::AD_HL_ID)->fetch();
         $entity = HL\HighloadBlockTable::compileEntity($hlblock);
         $entity_data_class = $entity->getDataClass();
+        $additionalFilter = ["=UF_STATUS" => [self::POSTED, self::MOVING]];
         foreach(self::FIELDS as $alias => $field){
             if(array_key_exists("filter_type", $field)){
                 switch ($field["filter_type"]){
@@ -541,7 +548,7 @@ class AdService extends ServiceBase
                                 $filter = array_merge($filter, $entity_data_class::getList([
                                     "select" => $select,
                                     "group" => [$field["field"]],
-                                    "filter" => ["!".$field["field"] => ''],
+                                    "filter" => array_merge(["!".$field["field"] => ''], $additionalFilter),
                                     "runtime" => [
                                         $alias => [
                                             'data_type' => Iblock::wakeUp($field["ref_id"])->getEntityDataClass(),
@@ -558,7 +565,7 @@ class AdService extends ServiceBase
                             case FieldType::ULIST:{
                                 $filter = array_merge($filter, $entity_data_class::getList([
                                     "select" => [$alias."|ID" => $field["field"], $alias."|NAME"=>$field["field"]."_ALIAS.VALUE"],
-                                    "filter" => ["!".$field["field"] => ''],
+                                    "filter" => array_merge(["!".$field["field"] => ''], $additionalFilter),
                                     "order" => [$field["field"] => "ASC"],
                                     "group" => [$field["field"]],
                                     "runtime" => [
@@ -576,7 +583,7 @@ class AdService extends ServiceBase
                             case FieldType::SCALAR:{
                                 $filter = array_merge($filter, $entity_data_class::getList([
                                     "select" => [$alias => $field["field"]],
-                                    "filter" => ["!".$field["field"] => ''],
+                                    "filter" => array_merge(["!".$field["field"] => ''], $additionalFilter),
                                     "order" => [$field["field"] => "ASC"],
                                     "group" => [$field["field"]]
                                 ])->fetchAll());
@@ -589,7 +596,7 @@ class AdService extends ServiceBase
                             case FieldType::SCALAR:{
                                 $filter = array_merge($filter, $entity_data_class::getList([
                                     "select" => [$alias."|MIN"=>"MIN", $alias."|MAX"=>"MAX"],
-                                    "filter" => ["!".$field["field"] => ''],
+                                    "filter" => array_merge(["!".$field["field"] => ''], $additionalFilter),
                                     "runtime" => [
                                         new ExpressionField("MIN", "MIN(%s)", [$field["field"]]),
                                         new ExpressionField("MAX", "MAX(%s)", [$field["field"]])
@@ -634,6 +641,7 @@ class AdService extends ServiceBase
                 "seller_type|ID"=>"seller_type_alias.ID", "seller_type|NAME"=>"seller_type_alias.VALUE",
                 "user|id"=>"user_alias.ID", "user|name"=>"user_alias.NAME",
                 "user|city"=>"user_alias.PERSONAL_CITY", "user|photo" => "FULL_PATH",
+                "user|phone"=>"user_alias.PERSONAL_MOBILE",
                 "documents_list|ID" => "documents_list_alias.ID", "documents_list|NAME" => "documents_list_alias.NAME",
                 "documents_description" => "UF_AVAILABILITY_OF_DOCUMENTS_TXT", "video" => "UF_VIDEO",
                 "promotion" => "UF_PROMOT",
@@ -814,6 +822,8 @@ class AdService extends ServiceBase
             "usd" => round(((float)$el["price"] / (float)$currencies["Valute"]["USD"]["Value"]), 2),
             "eur" => round(((float)$el["price"] / (float)$currencies["Valute"]["EUR"]["Value"]), 2)
         ];
+        $favorites = ListFavouritesClass::ListFavouritesClassMethod();
+        $el["favorite"] = in_array($el["ID"], $favorites);
         return $el;
     }
 

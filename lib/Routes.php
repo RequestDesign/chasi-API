@@ -8,6 +8,7 @@ use Site\Api\Controllers\AdController;
 use Site\Api\Controllers\AdvController;
 use Site\Api\Controllers\AuthenticationController;
 use Site\Api\Controllers\BrandController;
+use Site\Api\Controllers\CityController;
 use Site\Api\Controllers\CsrfTokenController;
 use Site\Api\Controllers\FAQController;
 use Site\Api\Controllers\ReviewController;
@@ -51,7 +52,7 @@ class Routes
             $routes->post('user/ads/{id}/promote', [AdController::class, 'promote']);
             $routes->post('user/ads/{id}/pay', [AdController::class, 'pay']);
             $routes->post('user/confirm-email', [UserController::class, 'confirmEmail']);
-            //$routes->post('user/confirm-phone', [UserController::class, 'confirmPhone']);
+            $routes->post('user/confirm-phone', [UserController::class, 'confirmPhone']);
             $routes->get('favorites', [AdController::class, 'favorites']);
             $routes->post('favorites/{id}', [AdController::class, 'toggleFavorites']);
 
@@ -74,6 +75,8 @@ class Routes
             $routes->get('ads/{id}', [AdController::class, 'getOne']);
             $routes->post('ads/{id}', [AdController::class, 'edit']);
             $routes->delete('ads/{id}', [AdController::class, 'delete']);
+            $routes->post('search-requests', [AdController::class, 'setSearchRequests']);
+            $routes->get('search-requests', [AdController::class, 'getSearchRequests']);
 
             // рекламы
 
@@ -86,6 +89,10 @@ class Routes
             // about
 
             $routes->get('about', [AboutController::class, 'getOne']);
+
+            // cities
+
+            $routes->get('cities', [CityController::class, 'getList']);
         });
     }
 }

@@ -22,6 +22,11 @@ class ReviewService extends ServiceBase
             "type" => FieldType::USER,
             "rule" => ModelRules::READ
         ),
+        "to" => array(
+            "field" => "KOMU.VALUE",
+            "type" => FieldType::USER,
+            "rule" => ModelRules::READ
+        ),
         "date_created" => array(
             "field" => "DATE_CREATE",
             "type" => FieldType::SCALAR,

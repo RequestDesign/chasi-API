@@ -284,7 +284,8 @@ class ServiceBase
                                 $alias."|NAME"=>$alias."_ALIAS.NAME",
                                 $alias."|LAST_NAME"=>$alias."_ALIAS.LAST_NAME",
                                 $alias."|CITY" => $alias."_ALIAS.PERSONAL_CITY",
-                                $alias."|PHOTO" => "USER_FULL_PATH"
+                                $alias."|PHOTO" => "USER_FULL_PATH",
+                                $alias."|PHONE" => $alias."_ALIAS.PERSONAL_MOBILE"
                             ];
                             foreach ($user_fields as $user_field_key => $user_field_value) {
                                 $this->queryParams["select"][$user_field_key] = $user_field_value;
