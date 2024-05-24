@@ -221,7 +221,7 @@ class AuthenticationController extends Controller
                         return new EventResult(EventResult::ERROR, null, 'site.api', $this);
                     }
                     case 'repeatNewPasswordInput':{
-                        $this->addError(new Error("Некорректный пароль", "incorrect_password"));
+                        $this->addError(new Error("Нельзя заменить на старый пароль", "incorrect_password"));
                         http_response_code(400);
                         return new EventResult(EventResult::ERROR, null, 'site.api', $this);
                     }
