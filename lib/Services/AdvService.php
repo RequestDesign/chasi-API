@@ -48,6 +48,11 @@ class AdvService extends ServiceBase
             'field' => 'description.VALUE',
             'type' => FieldType::SCALAR,
             "rule" => ModelRules::READ
+        ),
+        'adv_link' => array(
+            'field' => 'link.VALUE',
+            'type' => FieldType::SCALAR,
+            "rule" => ModelRules::READ
         )
     ];
 

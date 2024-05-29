@@ -7,6 +7,7 @@ require_once($_SERVER["DOCUMENT_ROOT"].'/ajax/class/ForgotPassEmail1Class.php');
 require_once($_SERVER["DOCUMENT_ROOT"].'/ajax/class/ForgotPassEmail2Class.php');
 require_once($_SERVER["DOCUMENT_ROOT"].'/ajax/class/ForgotPassEmail3Class.php');
 require_once($_SERVER["DOCUMENT_ROOT"].'/ajax/class/ResendCodeClass.php');
+require_once($_SERVER["DOCUMENT_ROOT"].'/ajax/class/ResendCodeProfileClass.php');
 
 use Bitrix\Main\EventResult;
 use Bitrix\Main\Application;
@@ -23,6 +24,7 @@ use ForgotPassEmail1Class;
 use ForgotPassEmail2Class;
 use ForgotPassEmail3Class;
 use ResendCodeClass;
+use ResendCodeProfile;
 
 /**
  * AuthenticationController
@@ -95,6 +97,14 @@ class AuthenticationController extends Controller
                         (new Validation('id'))->required()->number(),
                         (new Validation('password'))->required()->password(),
                         (new Validation('confirmPassword'))->required()
+                    ])
+                ]
+            ],
+            'sendForgotConfirmCode' => [
+                'postfilters' => [
+                    new Validator([
+                        (new Validation('email'))->email(),
+                        (new Validation('phone'))->number()
                     ])
                 ]
             ]
@@ -311,6 +321,37 @@ class AuthenticationController extends Controller
     {
         global $USER;
         $USER->Logout();
+        return [];
+    }
+
+    public function sendForgotConfirmCodeAction(){
+        $request = $this->getRequest()->toArray();
+        if(empty($request["email"]) && empty($request["phone"])){
+            $this->addError(new Error(
+                "Одно из полей - 'email' или 'phone' должно быть обязательным",
+                PhoneEmailException::ERROR_REQUIRED
+            ));
+            http_response_code(400);
+            return new EventResult(EventResult::ERROR, null, 'site.api', $this);
+        }
+        $errors = [];
+        $res = ResendCodeProfile::ResendCodeProfileMethod($request["email"] ?? null, $request["phone"] ?? null, $errors);
+        if(!$res){
+            foreach($errors as $error_key => $error_message){
+                switch ($error_key){
+                    case 'resetPwdEmailInput':
+                    case 'resetPwdPhoneInput':{
+                        $this->addError(new Error(
+                            "Пользователь не найден",
+                            "illegal_user"
+                        ));
+                        break;
+                    }
+                }
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, "site.api", $this);
+            }
+        }
         return [];
     }
 

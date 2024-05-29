@@ -33,6 +33,7 @@ class Routes
             $routes->post('confirm-register', [AuthenticationController::class, 'confirmRegistration']);
             $routes->post('confirm-code', [AuthenticationController::class, 'sendConfirmCode']);
             $routes->post('forgot', [AuthenticationController::class, 'forgot']);
+            $routes->post('forgot/confirm-code', [AuthenticationController::class, 'sendForgotConfirmCode']);
             $routes->post('confirm-forgot-code', [AuthenticationController::class, 'confirmForgot']);
             $routes->post('change-password', [AuthenticationController::class, 'changePassword']);
 
@@ -51,10 +52,12 @@ class Routes
             $routes->patch('user/ads/{id}/archieve', [AdController::class, 'archieve']);
             $routes->post('user/ads/{id}/promote', [AdController::class, 'promote']);
             $routes->post('user/ads/{id}/pay', [AdController::class, 'pay']);
+            $routes->post('user/confirm-code', [AuthenticationController::class, 'sendForgotConfirmCode']);
             $routes->post('user/confirm-email', [UserController::class, 'confirmEmail']);
             $routes->post('user/confirm-phone', [UserController::class, 'confirmPhone']);
             $routes->get('favorites', [AdController::class, 'favorites']);
             $routes->post('favorites/{id}', [AdController::class, 'toggleFavorites']);
+            $routes->post('viewed/{id}', [AdController::class, 'addViewed']);
 
             // отзывы
             $routes->get('users/{id}/reviews', [ReviewController::class, 'getList']);

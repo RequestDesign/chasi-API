@@ -19,6 +19,7 @@ use Site\Api\Exceptions\AdNotFoundAuthException;
 use Site\Api\Exceptions\CreateException;
 use Site\Api\Exceptions\EditException;
 use Site\Api\Exceptions\FilterException;
+use Site\Api\Exceptions\PhoneMissingException;
 use Site\Api\Exceptions\PublishException;
 use Site\Api\Postfilters\ChangeKeyCase;
 use Site\Api\Postfilters\FilterReorder;
@@ -93,6 +94,11 @@ class AdController extends Controller
             }
             if($e instanceof CreateException){
                 $this->addError(new Error($e->getMessage(), CreateException::INVALID_CREATE_DATA, ["field"=>$e->getField()]));
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, null, $this);
+            }
+            if($e instanceof PhoneMissingException){
+                $this->addError(new Error($e->getMessage(), PhoneMissingException::MISSING_PHONE));
                 http_response_code(400);
                 return new EventResult(EventResult::ERROR, null, null, $this);
             }
@@ -364,6 +370,10 @@ class AdController extends Controller
         return $res ? $res : [];
     }
 
+    public function addViewedAction(){
+
+    }
+
     protected function getDefaultPreFilters():array
     {
         return [
@@ -569,6 +579,13 @@ class AdController extends Controller
                 "+prefilters" => [
                     new Validator([
                         (new Validation("q"))->required()->not_empty()
+                    ])
+                ]
+            ],
+            "addViewed" => [
+                "+prefilters" => [
+                    new Validator([
+                        (new Validation("id"))->required()->number()
                     ])
                 ]
             ]

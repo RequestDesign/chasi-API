@@ -37,6 +37,7 @@ use Site\Api\Exceptions\AdNotFoundAuthException;
 use Site\Api\Exceptions\CreateException;
 use Site\Api\Exceptions\EditException;
 use Site\Api\Exceptions\FilterException;
+use Site\Api\Exceptions\PhoneMissingException;
 use Site\Api\Exceptions\PublishException;
 
 
@@ -332,6 +333,7 @@ class AdService extends ServiceBase
     public function create($params = []):\Bitrix\Main\Entity\AddResult
     {
         global $USER;
+        if(!$USER["PERSONAL_MOBILE"]) throw new PhoneMissingException("Пользователю необходимо указать номер телефона");
         $createData = $this->getCreateData();
         $createData["UF_STATUS"] = isset($createData["UF_PROMOT"]) ?
                                         $createData["UF_PROMOT"]        ?
@@ -646,7 +648,9 @@ class AdService extends ServiceBase
                 "documents_description" => "UF_AVAILABILITY_OF_DOCUMENTS_TXT", "video" => "UF_VIDEO",
                 "promotion" => "UF_PROMOT",
                 "promotion_type|ID" => "promotion_type_alias.ID", "promotion_type|NAME" => "promotion_type_alias.NAME",
-                "status|ID" => "status_alias.ID", "status|NAME" => "status_alias.VALUE"],
+                "status|ID" => "status_alias.ID", "status|NAME" => "status_alias.VALUE",
+                "views" => "UF_COUNTER", "likes"=>"UF_LIKES",
+                "calls" => "UF_CALLS", "active_to"=>"UF_ACTIVE_UP_TO"],
             "runtime" => [
                 "brand_alias" => [
                     "data_type" => Iblock::wakeUp(1)->getEntityDataClass(),
@@ -809,7 +813,7 @@ class AdService extends ServiceBase
                 new ExpressionField('CNT', 'COUNT(*)'),
             ],
             "select" => ["CNT"],
-            "filter" => ["=UF_USER_ID" => $el["user|id"]]
+            "filter" => ["=UF_USER_ID" => $el["user|id"], "=UF_STATUS"=>[self::POSTED, self::MOVING]]
         ])->fetch()["CNT"];
         $moreEls = $entity_data_class::getList([
             "select" => ["ID"],
