@@ -5,6 +5,7 @@ namespace Site\Api\Controllers;
 require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/ListFavouritesClass.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/FavouritesClass.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/SearchDataClass.php");
+require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/CountCallsClass.php");
 
 use Bitrix\Main\DI\ServiceLocator;
 use Bitrix\Main\Engine\ActionFilter\Authentication;
@@ -31,6 +32,7 @@ use Site\Api\Services\Validation;
 use ListFavouritesClass;
 use FavouritesClass;
 use SearchDataClass;
+use CountCallsClass;
 
 class AdController extends Controller
 {
@@ -370,6 +372,28 @@ class AdController extends Controller
         return $res ? $res : [];
     }
 
+    public function addCallAction() {
+        $request = $this->getRequest()->toArray();
+        $errors = [];
+        $res = CountCallsClass::CountCallsClassMethod($request["id"], $errors);
+        if(!$res){
+            foreach($errors as $error_key => $error_message){
+                switch ($error_key){
+                    case 'idExists':{
+                        $this->addError(new Error(
+                            "Неверный id объявления",
+                            "wrong_id"
+                        ));
+                        break;
+                    }
+                }
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, "site.api", $this);
+            }
+        }
+        return [];
+    }
+
     public function addViewedAction(){
 
     }
@@ -579,6 +603,13 @@ class AdController extends Controller
                 "+prefilters" => [
                     new Validator([
                         (new Validation("q"))->required()->not_empty()
+                    ])
+                ]
+            ],
+            "addCall" => [
+                "+prefilters" => [
+                    new Validator([
+                        (new Validation("id"))->required()->number()
                     ])
                 ]
             ],

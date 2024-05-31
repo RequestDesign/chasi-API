@@ -65,6 +65,7 @@ class Routes
             $routes->post('user/reviews', [ReviewController::class, 'create']);
             $routes->get('review-ratings', [ReviewController::class, 'getReviewRatings']);
             $routes->delete('reviews/{id}', [ReviewController::class, 'delete']);
+            $routes->post('reviews/{id}/complain', [ReviewController::class, 'complain']);
 
             // бренды
             $routes->get('brands', [BrandController::class, 'getList']);
@@ -80,6 +81,7 @@ class Routes
             $routes->delete('ads/{id}', [AdController::class, 'delete']);
             $routes->post('search-requests', [AdController::class, 'setSearchRequests']);
             $routes->get('search-requests', [AdController::class, 'getSearchRequests']);
+            $routes->post('ads/{id}/call', [AdController::class, 'addCall']);
 
             // рекламы
 

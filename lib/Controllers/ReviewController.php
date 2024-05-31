@@ -4,6 +4,7 @@ namespace Site\Api\Controllers;
 
 require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/AddReviewClass.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/DeleteReviewClass.php");
+require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/ZhalobaClass.php");
 
 use Bitrix\Iblock\PropertyTable;
 use Bitrix\Main\Loader;
@@ -27,6 +28,7 @@ use Site\Api\Prefilters\Validator;
 use Site\Api\Services\Validation;
 use AddReviewClass;
 use DeleteReviewClass;
+use ZhalobaClass;
 
 class ReviewController extends Controller
 {
@@ -166,6 +168,28 @@ class ReviewController extends Controller
         return ["id" => $res];
     }
 
+    public function complainAction(){
+        $request = $this->getRequest()->toArray();
+        $errors = [];
+        $res = ZhalobaClass::ZhalobaClassMethod($request["id"], $errors);
+        if(!$res){
+            foreach($errors as $error_key => $error_message){
+                switch ($error_key){
+                    case 'userDialog':{
+                        $this->addError(new Error(
+                            "Не удалось создать чат",
+                            "dialog_not_created"
+                        ));
+                        break;
+                    }
+                }
+            }
+            http_response_code(400);
+            return new EventResult(EventResult::ERROR, null, "site.api", $this);
+        }
+        return ["id" => $res];
+    }
+
     protected function getDefaultPreFilters():array
     {
         return [
@@ -218,6 +242,14 @@ class ReviewController extends Controller
                 ]
             ],
             "delete" => [
+                "+prefilters" => [
+                    new Authentication(),
+                    new Validator([
+                        (new Validation('id'))->number()->required()
+                    ])
+                ]
+            ],
+            "complain" => [
                 "+prefilters" => [
                     new Authentication(),
                     new Validator([

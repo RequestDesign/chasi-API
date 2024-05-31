@@ -333,7 +333,7 @@ class AdService extends ServiceBase
     public function create($params = []):\Bitrix\Main\Entity\AddResult
     {
         global $USER;
-        if(!$USER["PERSONAL_MOBILE"]) throw new PhoneMissingException("Пользователю необходимо указать номер телефона");
+        if(!$USER->GetParam("PERSONAL_MOBILE")) throw new PhoneMissingException("Пользователю необходимо указать номер телефона");
         $createData = $this->getCreateData();
         $createData["UF_STATUS"] = isset($createData["UF_PROMOT"]) ?
                                         $createData["UF_PROMOT"]        ?
@@ -650,7 +650,8 @@ class AdService extends ServiceBase
                 "promotion_type|ID" => "promotion_type_alias.ID", "promotion_type|NAME" => "promotion_type_alias.NAME",
                 "status|ID" => "status_alias.ID", "status|NAME" => "status_alias.VALUE",
                 "views" => "UF_COUNTER", "likes"=>"UF_LIKES",
-                "calls" => "UF_CALLS", "active_to"=>"UF_ACTIVE_UP_TO"],
+                "calls" => "UF_CALLS", "active_to"=>"UF_ACTIVE_UP_TO",
+                "date_promotion"=>"UF_DATE_START_PROMOT"],
             "runtime" => [
                 "brand_alias" => [
                     "data_type" => Iblock::wakeUp(1)->getEntityDataClass(),
