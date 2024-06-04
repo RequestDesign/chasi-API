@@ -333,7 +333,8 @@ class AdService extends ServiceBase
     public function create($params = []):\Bitrix\Main\Entity\AddResult
     {
         global $USER;
-        if(!$USER->GetParam("PERSONAL_MOBILE")) throw new PhoneMissingException("Пользователю необходимо указать номер телефона");
+        $user = UserTable::getById($USER->GetID())->fetch();
+        if(!$user["PERSONAL_MOBILE"]) throw new PhoneMissingException("Пользователю необходимо указать номер телефона");
         $createData = $this->getCreateData();
         $createData["UF_STATUS"] = isset($createData["UF_PROMOT"]) ?
                                         $createData["UF_PROMOT"]        ?
@@ -342,7 +343,7 @@ class AdService extends ServiceBase
                                         self::MODERATED;
         $createData = array_merge($createData, $params);
         $createData["UF_ACTIVE"] = "Y";
-        $city = UserTable::getById($USER->GetID())->fetch()["PERSONAL_CITY"];
+        $city = $user["PERSONAL_CITY"];
         $createData["UF_TOWN"] = $city;
         $wh = new WatchHighloadBlock();
         return $wh->create($createData);
