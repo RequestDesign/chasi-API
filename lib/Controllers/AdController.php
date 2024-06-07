@@ -6,6 +6,8 @@ require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/ListFavouritesClass.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/FavouritesClass.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/SearchDataClass.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/CountCallsClass.php");
+require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/ViewedClass.php");
+require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/ListViewedClass.php");
 
 use Bitrix\Main\DI\ServiceLocator;
 use Bitrix\Main\Engine\ActionFilter\Authentication;
@@ -33,6 +35,8 @@ use ListFavouritesClass;
 use FavouritesClass;
 use SearchDataClass;
 use CountCallsClass;
+use ViewedClass;
+use ListViewedClass;
 
 class AdController extends Controller
 {
@@ -395,7 +399,36 @@ class AdController extends Controller
     }
 
     public function addViewedAction(){
+        $request = $this->getRequest()->toArray();
+        $errors = [];
+        $res = ViewedClass::ViewedClassMethod($request["id"], $errors);
+        if(!$res){
+            foreach($errors as $error_key => $error_message){
+                switch ($error_key){
+                    case 'idExists':{
+                        $this->addError(new Error(
+                            "Неверный id объявления",
+                            "wrong_id"
+                        ));
+                        break;
+                    }
+                }
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, "site.api", $this);
+            }
+        }
+        return [];
+    }
 
+    public function getViewedAction(){
+        $viewed = ListViewedClass::ListViewedClassMethod();
+        if(!$viewed) return [];
+        $params = [
+            "filter" => [
+                ["ID", "in", $viewed]
+            ]
+        ];
+        return $this->getListAction($params);
     }
 
     protected function getDefaultPreFilters():array
@@ -619,7 +652,13 @@ class AdController extends Controller
                         (new Validation("id"))->required()->number()
                     ])
                 ]
-            ]
+            ],
+            "getViewed" => [
+                "postfilters" => [
+                    new RecursiveResponseList(),
+                    new ChangeKeyCase()
+                ]
+            ],
         ];
     }
 

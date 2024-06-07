@@ -6,6 +6,7 @@ require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/SearchDataClass.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/CurrencyRateClass.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/OrderClass.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/ListFavouritesClass.php");
+require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/ListViewedClass.php");
 
 use Bitrix\Iblock\Iblock;
 use Bitrix\Main\Application;
@@ -21,6 +22,7 @@ use \SearchDataClass;
 use CurrencyRateClass;
 use OrderClass;
 use ListFavouritesClass;
+use ListViewedClass;
 
 
 Loader::includeModule('highloadblock');
@@ -244,6 +246,21 @@ class AdService extends ServiceBase
             "type" => FieldType::SCALAR,
             "rule" => ModelRules::CREATE | ModelRules::READ
         ),
+        "views" => array(
+            "field" => "UF_COUNTER",
+            "type" => FieldType::SCALAR,
+            "rule" => ModelRules::READ
+        ),
+        "calls" => array(
+            "field" => "UF_CALLS",
+            "type" => FieldType::SCALAR,
+            "rule" => ModelRules::READ
+        ),
+        "likes" => array(
+            "field" => "UF_LIKES",
+            "type" => FieldType::SCALAR,
+            "rule" => ModelRules::READ
+        )
     ];
 
     /**

@@ -58,7 +58,6 @@ class UserController extends Controller
                 "+prefilters" => [
                     new Validator([
                         (new Validation("email"))->email(),
-                        (new Validation("phone"))->number(),
                         (new Validation("name"))->maxLength(255)->required(),
                         (new Validation("city"))->maxLength(255)->required(),
                         (new Validation("password"))->required()->password(),
@@ -89,8 +88,7 @@ class UserController extends Controller
                     new Validator([
                         (new Validation("id"))->required()->number(),
                         (new Validation("newPassword"))->password(),
-                        (new Validation("email"))->email(),
-                        (new Validation("phone"))->number()
+                        (new Validation("email"))->email()
                     ]),
                     new Authentication()
                 ]

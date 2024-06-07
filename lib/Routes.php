@@ -12,6 +12,7 @@ use Site\Api\Controllers\CityController;
 use Site\Api\Controllers\CsrfTokenController;
 use Site\Api\Controllers\FAQController;
 use Site\Api\Controllers\ReviewController;
+use Site\Api\Controllers\TariffController;
 use Site\Api\Controllers\UserController;
 
 /**
@@ -57,6 +58,7 @@ class Routes
             $routes->post('user/confirm-phone', [UserController::class, 'confirmPhone']);
             $routes->get('favorites', [AdController::class, 'favorites']);
             $routes->post('favorites/{id}', [AdController::class, 'toggleFavorites']);
+            $routes->get('viewed', [AdController::class, 'getViewed']);
             $routes->post('viewed/{id}', [AdController::class, 'addViewed']);
 
             // отзывы
@@ -98,6 +100,10 @@ class Routes
             // cities
 
             $routes->get('cities', [CityController::class, 'getList']);
+
+            //tariffs
+
+            $routes->get('tariffs', [TariffController::class, 'getList']);
         });
     }
 }
