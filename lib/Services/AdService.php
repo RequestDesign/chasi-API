@@ -421,7 +421,7 @@ class AdService extends ServiceBase
         if(!$el){
             throw new EditException(message: "Не существует элемента с переданным id");
         }
-        if(in_array($el["status"], [self::POSTED, self::MOVING])){
+        if(in_array($el["status"], [self::POSTED, self::MOVING, self::REJECTED])){
             $createData["UF_STATUS"] = self::MODERATED;
         }
         $createData["UF_ACTIVE"] = "Y";
@@ -836,7 +836,7 @@ class AdService extends ServiceBase
         ])->fetch()["CNT"];
         $moreEls = $entity_data_class::getList([
             "select" => ["ID"],
-            "filter" => ["=UF_BRAND"=>$el["brand_id"], "=UF_MEXANIZM"=>$el["mechanism_id"]]
+            "filter" => ["!ID"=>$el["ID"], "=UF_BRAND"=>$el["brand_id"], "=UF_MEXANIZM"=>$el["mechanism_id"], "=UF_STATUS"=>[self::POSTED, self::MOVING]]
         ])->fetchAll();
         $el["more"] = array_column($moreEls, "ID");
         unset($el["brand_id"], $el["mechanism_id"]);
