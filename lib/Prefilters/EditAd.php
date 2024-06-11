@@ -45,7 +45,9 @@ class EditAd extends Base
     {
         global $USER;
         if(!$USER->IsAuthorized()){
-            return (new Authentication())->onBeforeAction($event);
+            $auth = new Authentication();
+            $auth->bindAction($this->getAction());
+            return $auth->onBeforeAction($event);
         }
         $hlblock = HL\HighloadBlockTable::getById(self::AD_HL_ID)->fetch();
         $entity = HL\HighloadBlockTable::compileEntity($hlblock);

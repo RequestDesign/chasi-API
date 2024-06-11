@@ -50,7 +50,7 @@ class Routes
             $routes->get('user/ads/active', [AdController::class, 'getActive']);
             $routes->get('user/ads/archieve', [AdController::class, 'getArchieve']);
             $routes->patch('user/ads/{id}/publish', [AdController::class, 'publish']);
-            $routes->patch('user/ads/{id}/archieve', [AdController::class, 'archieve']);
+            $routes->post('user/ads/{id}/archieve', [AdController::class, 'archieve']);
             $routes->post('user/ads/{id}/promote', [AdController::class, 'promote']);
             $routes->post('user/ads/{id}/pay', [AdController::class, 'pay']);
             $routes->post('user/confirm-code', [AuthenticationController::class, 'sendForgotConfirmCode']);
@@ -78,6 +78,7 @@ class Routes
             $routes->post('ads/draft', [AdController::class, 'createDraft']);
             $routes->get('ads-create-values', [AdController::class, 'getCreateValues']);
             $routes->get('filter', [AdController::class, 'getFilter']);
+            $routes->get('ads/removing-reasons', [AdController::class, 'getReasons']);
             $routes->get('ads/{id}', [AdController::class, 'getOne']);
             $routes->post('ads/{id}', [AdController::class, 'edit']);
             $routes->delete('ads/{id}', [AdController::class, 'delete']);

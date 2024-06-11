@@ -9,6 +9,10 @@ require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/CountCallsClass.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/ViewedClass.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/ListViewedClass.php");
 
+use Bitrix\Main\Loader;
+
+Loader::includeModule('iblock');
+
 use Bitrix\Main\DI\ServiceLocator;
 use Bitrix\Main\Engine\ActionFilter\Authentication;
 use \Bitrix\Main\Engine\Controller;
@@ -24,6 +28,7 @@ use Site\Api\Exceptions\EditException;
 use Site\Api\Exceptions\FilterException;
 use Site\Api\Exceptions\PhoneMissingException;
 use Site\Api\Exceptions\PublishException;
+use Site\Api\Exceptions\ReasonNotFoundException;
 use Site\Api\Postfilters\ChangeKeyCase;
 use Site\Api\Postfilters\FilterReorder;
 use Site\Api\Postfilters\RecursiveResponseList;
@@ -37,6 +42,7 @@ use SearchDataClass;
 use CountCallsClass;
 use ViewedClass;
 use ListViewedClass;
+use Bitrix\Iblock\Iblock;
 
 class AdController extends Controller
 {
@@ -262,6 +268,11 @@ class AdController extends Controller
                 http_response_code(400);
                 return new EventResult(EventResult::ERROR, null, null, $this);
             }
+            if($e instanceof ReasonNotFoundException){
+                $this->addError(new Error($e->getMessage(), ReasonNotFoundException::WRONG_REASON));
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, null, $this);
+            }
         }
     }
 
@@ -431,6 +442,15 @@ class AdController extends Controller
         return $this->getListAction($params);
     }
 
+    public function getReasonsAction(){
+        $entityDataClass = Iblock::wakeUp(14)->getEntityDataClass();
+        $els = $entityDataClass::getList([
+            "select" => ["ID", "NAME"],
+            "order" => ["sort"=>"asc"]
+        ])->fetchAll();
+        return $els;
+    }
+
     protected function getDefaultPreFilters():array
     {
         return [
@@ -535,11 +555,10 @@ class AdController extends Controller
             ],
             "edit" => [
                 "+prefilters" => [
-                    new Authentication(),
+                    new EditAd(),
                     new Validator([
                         (new Validation("id"))->number()->required()
                     ]),
-                    new EditAd()
                 ]
             ],
             "getWaiting" => [
@@ -590,7 +609,8 @@ class AdController extends Controller
                 "+prefilters" => [
                     new Authentication(),
                     new Validator([
-                        (new Validation("id"))->required()->number()
+                        (new Validation("id"))->required()->number(),
+                        (new Validation("reason"))->number()
                     ])
                 ]
             ],
@@ -659,6 +679,12 @@ class AdController extends Controller
                     new ChangeKeyCase()
                 ]
             ],
+            "getReasons" => [
+                "postfilters" => [
+                    new RecursiveResponseList(),
+                    new ChangeKeyCase()
+                ]
+            ]
         ];
     }
 

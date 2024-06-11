@@ -41,6 +41,7 @@ use Site\Api\Exceptions\EditException;
 use Site\Api\Exceptions\FilterException;
 use Site\Api\Exceptions\PhoneMissingException;
 use Site\Api\Exceptions\PublishException;
+use Site\Api\Exceptions\ReasonNotFoundException;
 
 
 class AdService extends ServiceBase
@@ -935,6 +936,18 @@ class AdService extends ServiceBase
         $editData = [
             "UF_STATUS" => self::CLOSED
         ];
+        if(in_array($el["UF_STATUS"], [self::POSTED, self::MOVING])){
+            if(!isset($this->request["reason"]) || !$this->request["reason"]){
+                throw new ReasonNotFoundException("Не указана корректная причина снятия объявления");
+            }
+            $entityDataClass = Iblock::wakeUp(14)->getEntityDataClass();
+            $el = $entityDataClass::getList([
+                "select" => ["ID"],
+                "filter" => ["=ID"=>$this->request["reason"]]
+            ])->fetch();
+            if(!$el) throw new ReasonNotFoundException("Не указана корректная причина снятия объявления");
+            $editData["UF_REASON"] = $this->request["reason"];
+        }
         $wh = new WatchHighloadBlock();
         return $wh->update($this->request["id"], $editData);
     }
