@@ -87,7 +87,7 @@ class AuthenticationController extends Controller
                 'postfilters' => [
                     new Validator([
                         (new Validation('email'))->email(),
-                        (new Validation('phone'))->number()
+                        (new Validation('phone'))
                     ])
                 ]
             ],
@@ -301,6 +301,13 @@ class AuthenticationController extends Controller
                         $this->addError(new Error(
                             "Пользователь не найден",
                             "illegal_user"
+                        ));
+                        break;
+                    }
+                    case 'valid':{
+                        $this->addError(new Error(
+                            "Номер телефона не валиден",
+                            "phone_is_not_correct"
                         ));
                         break;
                     }
