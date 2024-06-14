@@ -53,8 +53,20 @@ class UserService
                 $exception->setExceptionCode(RegisterException::EMAIL_EXCEPTION_CODE);
             }
             else {
-                $exception = new RegisterException("Аккаунт с указанным номер телефона уже существует");
-                $exception->setExceptionCode(RegisterException::PHONE_EXCEPTION_CODE);
+                foreach ($errors as $error_key=>$error_value){
+                    switch($error_key){
+                        case "phoneInput":{
+                            $exception = new RegisterException("Аккаунт с указанным номером телефона уже существует");
+                            $exception->setExceptionCode(RegisterException::PHONE_EXCEPTION_CODE);
+                            break;
+                        }
+                        case "valid":{
+                            $exception = new RegisterException("Указанный номер телефона не валиден");
+                            $exception->setExceptionCode(RegisterException::PHONE_IS_NOT_CORRECT);
+                            break;
+                        }
+                    }
+                }
             }
             throw $exception;
         }
