@@ -366,6 +366,14 @@ class UserController extends Controller
                             $hasErrors = true;
                             break;
                         }
+                        case 'valid': {
+                            $this->addError(new Error(
+                                "Указанный номер телефона не валиден",
+                                "phone_is_not_correct"
+                            ));
+                            $hasErrors = true;
+                            break;
+                        }
                     }
                 }
             }
