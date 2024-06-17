@@ -408,7 +408,7 @@ class AdService extends ServiceBase
         $entity = HL\HighloadBlockTable::compileEntity($hlblock);
         $entity_data_class = $entity->getDataClass();
         $el = $entity_data_class::getByPrimary($this->request['id'], [
-            "select" => ["status"=>"status_alias.VALUE"],
+            "select" => ["status"=>"UF_STATUS"],
             "runtime" => [
                 "status_alias" => [
                     "data_type" => UserFieldEnumTable::class,
@@ -930,7 +930,7 @@ class AdService extends ServiceBase
             throw new AdNotFoundAuthException("Объявление не существует");
         }
 
-        if(!in_array($el["UF_STATUS"], [self::UNPAYED, self::DRAFT, self::REJECTED, self::POSTED, self::MOVING, self::MODERATED])){
+        if(!in_array($el["UF_STATUS"], [self::EXPIRED, self::UNPAYED, self::DRAFT, self::REJECTED, self::POSTED, self::MOVING, self::MODERATED])){
             throw new PublishException("Нельзя добавить в архив объявление со статусом \"{$el["STATUS_NAME"]}\"");
         }
         $editData = [

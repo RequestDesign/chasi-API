@@ -2,9 +2,12 @@
 
 namespace Site\Api\Services;
 
+use Bitrix\Main\Context;
 use Bitrix\Main\Engine\Response\Json;
+use Bitrix\Main\FileTable;
 use Bitrix\Main\LoaderException;
 use Bitrix\Main\Loader;
+use Bitrix\Main\ORM\Fields\ExpressionField;
 use Site\Api\Enum\FieldType;
 
 try {
@@ -59,6 +62,17 @@ class AdvService extends ServiceBase
     public function getList():array
     {
         $queryParams = $this->getQueryParams();
+        $serverHost = (Context::getCurrent()->getRequest()->isHttps()?"https://":"http://").Context::getCurrent()->getServer()->getHttpHost();
+        $queryParams["select"]["photo"] = "FULL_PATH";
+        $queryParams["runtime"] = [
+            "PREVIEW_ALIAS" => [
+                "data_type" => FileTable::class,
+                "reference" => [
+                    "=this.PREVIEW_PICTURE" => "ref.ID"
+                ]
+            ],
+            new ExpressionField('FULL_PATH', 'CONCAT("'.$serverHost.'/upload/", %s, "/", %s)', ["PREVIEW_ALIAS.SUBDIR", "PREVIEW_ALIAS.FILE_NAME"])
+        ];
         $dbElements = Iblock::wakeUp(5)->getEntityDataClass()::getList($queryParams);
         $elements = $dbElements->fetchAll();
         foreach ($elements as &$element){
