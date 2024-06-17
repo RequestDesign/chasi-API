@@ -67,8 +67,7 @@ class AuthenticationController extends Controller
             'forgot' => [
                 '+prefilters' => [
                     new Validator([
-                        (new Validation('email'))->email(),
-                        (new Validation('phone'))->number()
+                        (new Validation('email'))->email()
                     ])
                 ],
                 'postfilters' => [
@@ -171,10 +170,25 @@ class AuthenticationController extends Controller
         $errors = [];
         $id = ForgotPassEmail1Class::ForgotPassEmail1Method($request["email"] ?? null, $request["phone"] ?? null, $errors);
         if(!$id){
-            $this->addError(new Error(
-                "Пользователь не существует",
-                "user_not_found"
-            ));
+            foreach($errors as $error_key => $error_message){
+                switch ($error_key) {
+                    case 'valid':
+                    {
+                        $this->addError(new Error(
+                            "Указанный номер телефона не валиден",
+                            "phone_is_not_correct"
+                        ));
+                        break;
+                    }
+                    default: {
+                        $this->addError(new Error(
+                            "Пользователь не существует",
+                            "user_not_found"
+                        ));
+                        break;
+                    }
+                }
+            }
             http_response_code(404);
             return new EventResult(EventResult::ERROR, null, 'site.api', $this);
         }
