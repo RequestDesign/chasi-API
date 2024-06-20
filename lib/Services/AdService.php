@@ -422,7 +422,7 @@ class AdService extends ServiceBase
         if(!$el){
             throw new EditException(message: "Не существует элемента с переданным id");
         }
-        if(in_array($el["status"], [self::POSTED, self::MOVING, self::REJECTED])){
+        if(in_array($el["status"], [self::POSTED, self::MOVING, self::REJECTED, self::CLOSED])){
             $createData["UF_STATUS"] = self::MODERATED;
         }
         $createData["UF_ACTIVE"] = "Y";
