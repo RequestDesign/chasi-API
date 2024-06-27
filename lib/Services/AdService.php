@@ -215,6 +215,7 @@ class AdService extends ServiceBase
             "ref_id" => 6,
             "ref_field" => "ID",
             "fields" => ["ID", "NAME"],
+            "filter_name" => "ID",
             "rule" => ModelRules::CREATE | ModelRules::READ
         ),
         "status" => array(
@@ -400,7 +401,7 @@ class AdService extends ServiceBase
         return null;
     }
 
-    public function edit():\Bitrix\Main\Entity\UpdateResult
+    public function edit():array
     {
         global $USER;
         $createData = $this->getCreateData();
@@ -408,7 +409,7 @@ class AdService extends ServiceBase
         $entity = HL\HighloadBlockTable::compileEntity($hlblock);
         $entity_data_class = $entity->getDataClass();
         $el = $entity_data_class::getByPrimary($this->request['id'], [
-            "select" => ["status"=>"UF_STATUS"],
+            "select" => ["status"=>"UF_STATUS", "UF_PROMOTION"],
             "runtime" => [
                 "status_alias" => [
                     "data_type" => UserFieldEnumTable::class,
@@ -422,12 +423,45 @@ class AdService extends ServiceBase
         if(!$el){
             throw new EditException(message: "Не существует элемента с переданным id");
         }
-        if(in_array($el["status"], [self::POSTED, self::MOVING, self::REJECTED, self::CLOSED])){
+        if(in_array($el["status"], [self::POSTED, self::MOVING, self::REJECTED, self::CLOSED, self::MODERATED])){
+            //проверить на тариф и отправить ссылку
+
             $createData["UF_STATUS"] = self::MODERATED;
+
+            if($el["status"] != self::MOVING){
+                if(!($el["status"] == self::MODERATED && empty($this->request["promotionType"]))){
+                    $promotion = Iblock::wakeUp(self::FIELDS["promotion_type"]["ref_id"])
+                        ->getEntityDataClass()::getByPrimary(
+                            empty($this->request["promotionType"]) ? $el["UF_PROMOTION"] : $this->request["promotionType"],
+                            ["select" => ["ID", "_PRICE"=>"PRICE.VALUE"]
+                            ])->fetch();
+                    if($promotion["_PRICE"]){
+                        $createData["UF_STATUS"] = self::UNPAYED;
+                        $createData["UF_PROMOT"] = 1;
+                        $createData["UF_PROMOTION"] = $promotion["ID"];
+                    }
+                    else {
+                        $createData["UF_PROMOT"] = 0;
+                        $createData["UF_PROMOTION"] = $promotion["ID"];
+                    }
+                }
+            }
+            else {
+                unset($createData["UF_PROMOT"], $createData["UF_PROMOTION"]);
+            }
+
         }
-        $createData["UF_ACTIVE"] = "Y";
         $wh = new WatchHighloadBlock();
-        return $wh->update($this->request["id"], $createData);
+        $res = $wh->update($this->request["id"], $createData);
+        $url = null;
+        if(!empty($createData["UF_PROMOT"]) && $createData["UF_PROMOT"] && $res->isSuccess()){
+            $url = $this->getPayUrl($this->request["id"]);
+            $url = $url ? $url : null;
+        }
+        return [
+            "response" => $res,
+            "url" => $url
+        ];
     }
 
     public function getCreateValues(){
@@ -866,7 +900,6 @@ class AdService extends ServiceBase
             ]
         ])->fetchAll();
     }
-
     public function publish(){
         global $USER;
         $id = $this->request["id"];
@@ -875,7 +908,12 @@ class AdService extends ServiceBase
         $entity_data_class = $entity->getDataClass();
 
         $el = $entity_data_class::getByPrimary($id, [
-            "select" => ["ID", "UF_STATUS", "STATUS_NAME"=>"UF_STATUS_ALIAS.VALUE" ],
+            "select" => [
+                "ID",
+                "UF_STATUS",
+                "STATUS_NAME"=>"UF_STATUS_ALIAS.VALUE",
+                "UF_PROMOT",
+                ],
             "filter" => ["ID" => $id, "UF_USER_ID"=>$USER->GetID()],
             "runtime" => [
                 "UF_STATUS_ALIAS" => [
@@ -884,7 +922,7 @@ class AdService extends ServiceBase
                         "=this.UF_STATUS" => "ref.ID",
                     ],
                     ["join_type"=>"left"]
-                ],
+                ]
             ]
         ])->fetch();
 
@@ -893,16 +931,47 @@ class AdService extends ServiceBase
         }
 
         if(!in_array($el["UF_STATUS"], [self::UNPAYED, self::EXPIRED, self::DRAFT])){
-            throw new PublishException("Нельзя опубликовать объявление со статусом \"{$el["STATUS_NAME"]}\"");
+            throw new PublishException(
+                "Нельзя опубликовать объявление со статусом \"{$el["STATUS_NAME"]}\"",
+                PublishException::ILLEGAL_STATUS
+            );
         }
+
         $editData = [
             "UF_STATUS" => self::MODERATED
         ];
-        if($el["UF_STATUS"] != self::DRAFT){
+        if($el["UF_STATUS"] == self::UNPAYED){
             $editData["UF_PROMOT"] = 0;
+        } else {
+            $promotion = Iblock::wakeUp(self::FIELDS["promotion_type"]["ref_id"])
+                ->getEntityDataClass()::getByPrimary($this->request["promotionType"], [
+                    "select" => ["ID", "_PRICE"=>"PRICE.VALUE"]
+                ])->fetch();
+            if(!$promotion){
+                throw new CreateException(message: "Не существует тарифа с переданным id", field: "wrong_promotion");
+            }
+            if($promotion["_PRICE"]){
+                $editData["UF_STATUS"] = self::UNPAYED;
+                $editData["UF_PROMOT"] = 1;
+                $editData["UF_PROMOTION"] = $promotion["ID"];
+            }
+            else {
+                $editData["UF_PROMOT"] = 0;
+                $editData["UF_PROMOTION"] = $promotion["ID"];
+            }
         }
+
         $wh = new WatchHighloadBlock();
-        return $wh->update($this->request["id"], $editData);
+        $res = $wh->update($this->request["id"], $editData);
+        $url = null;
+        if(($el["UF_STATUS"] != self::UNPAYED) && $res->isSuccess()){
+            $url = $this->getPayUrl($this->request["id"]);
+            $url = $url ? $url : null;
+        }
+        return [
+            "response" => $res,
+            "url" => $url
+        ];
     }
 
     public function archieve(){
@@ -931,7 +1000,10 @@ class AdService extends ServiceBase
         }
 
         if(!in_array($el["UF_STATUS"], [self::EXPIRED, self::UNPAYED, self::DRAFT, self::REJECTED, self::POSTED, self::MOVING, self::MODERATED])){
-            throw new PublishException("Нельзя добавить в архив объявление со статусом \"{$el["STATUS_NAME"]}\"");
+            throw new PublishException(
+                "Нельзя добавить в архив объявление со статусом \"{$el["STATUS_NAME"]}\"",
+                PublishException::ILLEGAL_STATUS
+            );
         }
         $editData = [
             "UF_STATUS" => self::CLOSED
@@ -978,7 +1050,10 @@ class AdService extends ServiceBase
         }
 
         if(!in_array($el["UF_STATUS"], [self::POSTED])){
-            throw new PublishException("Нельзя продвигать объявление со статусом \"{$el["STATUS_NAME"]}\"");
+            throw new PublishException(
+                "Нельзя продвигать объявление со статусом \"{$el["STATUS_NAME"]}\"",
+                PublishException::ILLEGAL_STATUS
+            );
         }
         $editData = [
             "UF_STATUS" => self::UNPAYED,
@@ -1015,7 +1090,10 @@ class AdService extends ServiceBase
         }
 
         if(!in_array($el["UF_STATUS"], [self::UNPAYED])){
-            throw new PublishException("Нельзя продвигать объявление со статусом \"{$el["STATUS_NAME"]}\"");
+            throw new PublishException(
+                "Нельзя продвигать объявление со статусом \"{$el["STATUS_NAME"]}\"",
+                PublishException::ILLEGAL_STATUS
+            );
         }
 
         $url = $this->getPayUrl($el["ID"]);

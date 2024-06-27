@@ -31,7 +31,7 @@ use Site\Api\Enum\ModelRules;
 class ServiceBase
 {
     protected const FIELDS = [];
-    private const SORT_DIRECTIONS = ["ASC", "DESC"];
+    private const SORT_DIRECTIONS = ["ASC", "DESC", "RAND"];
     protected array $select = [];
     protected array $sort = [];
     protected int $limit = 16;
@@ -92,7 +92,7 @@ class ServiceBase
                         if($sortParams[$i][0] === '-'){
                             $sort[substr($sortParams[$i], 1)] = "DESC";
                         }
-                        else{
+                        else if($sortParams){
                             $sort[$sortParams[$i]] = "ASC";
                         }
                     }
@@ -108,6 +108,16 @@ class ServiceBase
                 }
                 else $this->sort[$sortConventer->process($sort_field)] = $direction;
             }
+        }
+        if(array_key_exists("rand", $sort)){
+            $this->sort["RAND"] = "ASC";
+            if(!array_key_exists("runtime", $this->queryParams)) $this->queryParams["runtime"] = [];
+            $this->queryParams["runtime"]["RAND"] = [
+                'data_type' => 'float',
+                'expression' => [
+                    'RAND()'
+                ]
+            ];
         }
         return $this;
     }
@@ -209,7 +219,6 @@ class ServiceBase
         $self = get_called_class();
         $upperConverter = new Converter(Converter::TO_UPPER);
         $this->select()->filter()->sort()->paginate();
-        $this->queryParams = [];
         $this->queryParams["select"] = [];
         foreach ($this->select as $alias => $selectField){
             if(array_key_exists("type", $selectField)){

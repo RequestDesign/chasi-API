@@ -49,7 +49,7 @@ class Routes
             $routes->get('user/ads/drafts', [AdController::class, 'getDrafts']);
             $routes->get('user/ads/active', [AdController::class, 'getActive']);
             $routes->get('user/ads/archieve', [AdController::class, 'getArchieve']);
-            $routes->patch('user/ads/{id}/publish', [AdController::class, 'publish']);
+            $routes->post('user/ads/{id}/publish', [AdController::class, 'publish']);
             $routes->post('user/ads/{id}/archieve', [AdController::class, 'archieve']);
             $routes->post('user/ads/{id}/promote', [AdController::class, 'promote']);
             $routes->post('user/ads/{id}/pay', [AdController::class, 'pay']);
@@ -60,6 +60,7 @@ class Routes
             $routes->post('favorites/{id}', [AdController::class, 'toggleFavorites']);
             $routes->get('viewed', [AdController::class, 'getViewed']);
             $routes->post('viewed/{id}', [AdController::class, 'addViewed']);
+            $routes->get('user/unread', [UserController::class, 'unread']);
 
             // отзывы
             $routes->get('users/{id}/reviews', [ReviewController::class, 'getList']);

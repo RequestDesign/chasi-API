@@ -11,6 +11,7 @@ include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/ChangeEmail2Class.php");
 include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/DeleteAvatarClass.php");
 include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/EditPhone1Class.php");
 include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/EditPhone2Class.php");
+include_once($_SERVER["DOCUMENT_ROOT"]."/ajax/class/UnreadMessage.php");
 
 use Bitrix\Main\Context;
 use Bitrix\Main\DI\ServiceLocator;
@@ -36,6 +37,7 @@ use ChangeEmail2Class;
 use DeleteAvatarClass;
 use EditPhone1Class;
 use EditPhone2Class;
+use UnreadMessage;
 
 /**
  * UserController class
@@ -122,6 +124,11 @@ class UserController extends Controller
                 ]
             ],
             "deletePhoto" => [
+                "+prefilters" => [
+                    new Authentication()
+                ]
+            ],
+            "unread" => [
                 "+prefilters" => [
                     new Authentication()
                 ]
@@ -464,6 +471,11 @@ class UserController extends Controller
             }
         }
         return [];
+    }
+
+    public function unreadAction(){
+        $errors = [];
+        return UnreadMessage::UnreadMessageMethod($errors);
     }
 
     protected function reArrayFiles(&$file_post){

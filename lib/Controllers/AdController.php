@@ -34,6 +34,7 @@ use Site\Api\Postfilters\FilterReorder;
 use Site\Api\Postfilters\RecursiveResponseList;
 use Site\Api\Prefilters\Csrf;
 use Site\Api\Prefilters\EditAd;
+use Site\Api\Prefilters\PublishFilter;
 use Site\Api\Prefilters\Validator;
 use Site\Api\Services\Validation;
 use ListFavouritesClass;
@@ -156,13 +157,13 @@ class AdController extends Controller
         try{
             try{
                 $res = $adService->edit();
-                if(!$res->isSuccess()){
-                    foreach($res->getErrors() as $error){
+                if(!$res["response"]->isSuccess()){
+                    foreach($res["response"]->getErrors() as $error){
                         $this->addError($error);
                     }
                     return new EventResult(EventResult::ERROR, null, null, $this);
                 }
-                return ["id" => $res->getId()];
+                return ["id" => $res["response"]->getId(), "url"=>$res["url"]];
             }
             catch (CreateException $e){
                 $this->addError(new Error($e->getMessage(), EditException::INVALID_EDIT_DATA, ["field"=>$e->getField()]));
@@ -222,13 +223,13 @@ class AdController extends Controller
         $adService = $serviceLocator->get("site.api.ad");
         try {
             $res = $adService->publish();
-            if(!$res->isSuccess()){
-                foreach($res->getErrors() as $error){
+            if(!$res["response"]->isSuccess()){
+                foreach($res["response"]->getErrors() as $error){
                     $this->addError($error);
                 }
                 return new EventResult(EventResult::ERROR, null, null, $this);
             }
-            return ["id" => $res->getId()];
+            return ["id" => $res["response"]->getId(), "url"=>$res["url"]];
         }
         catch (\Exception $e){
             if($e instanceof AdNotFoundAuthException) {
@@ -237,7 +238,12 @@ class AdController extends Controller
                 return new EventResult(EventResult::ERROR, null, null, $this);
             }
             if($e instanceof PublishException){
-                $this->addError(new Error($e->getMessage(), PublishException::ILLEGAL_STATUS));
+                $this->addError(new Error($e->getMessage(), $e->getField()));
+                http_response_code(400);
+                return new EventResult(EventResult::ERROR, null, null, $this);
+            }
+            if($e instanceof CreateException){
+                $this->addError(new Error($e->getMessage(), $e->getField()));
                 http_response_code(400);
                 return new EventResult(EventResult::ERROR, null, null, $this);
             }
@@ -264,7 +270,7 @@ class AdController extends Controller
                 return new EventResult(EventResult::ERROR, null, null, $this);
             }
             if($e instanceof PublishException){
-                $this->addError(new Error($e->getMessage(), PublishException::ILLEGAL_STATUS));
+                $this->addError(new Error($e->getMessage(), $e->getField()));
                 http_response_code(400);
                 return new EventResult(EventResult::ERROR, null, null, $this);
             }
@@ -297,7 +303,7 @@ class AdController extends Controller
                 return new EventResult(EventResult::ERROR, null, null, $this);
             }
             if($e instanceof PublishException){
-                $this->addError(new Error($e->getMessage(), PublishException::ILLEGAL_STATUS));
+                $this->addError(new Error($e->getMessage(), $e->getField()));
                 http_response_code(400);
                 return new EventResult(EventResult::ERROR, null, null, $this);
             }
@@ -602,7 +608,8 @@ class AdController extends Controller
                     new Authentication(),
                     new Validator([
                         (new Validation("id"))->required()->number()
-                    ])
+                    ]),
+                    new PublishFilter()
                 ]
             ],
             "archieve" => [
