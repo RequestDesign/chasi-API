@@ -355,15 +355,24 @@ class AdService extends ServiceBase
         $user = UserTable::getById($USER->GetID())->fetch();
         if(!$user["PERSONAL_MOBILE"]) throw new PhoneMissingException("Пользователю необходимо указать номер телефона");
         $createData = $this->getCreateData();
-        $createData["UF_STATUS"] = isset($createData["UF_PROMOT"]) ?
-                                        $createData["UF_PROMOT"]        ?
-                                            self::UNPAYED               :
-                                            self::MODERATED        :
-                                        self::MODERATED;
-        $createData = array_merge($createData, $params);
+        $promotion = Iblock::wakeUp(self::FIELDS["promotion_type"]["ref_id"])
+            ->getEntityDataClass()::getByPrimary(
+                $this->request["promotionType"],
+                ["select" => ["ID", "_PRICE"=>"PRICE.VALUE"]
+                ])->fetch();
+        if($promotion["_PRICE"]){
+            $createData["UF_STATUS"] = self::UNPAYED;
+            $createData["UF_PROMOT"] = 1;
+        }
+        else {
+            $createData["UF_STATUS"] = self::MODERATED;
+            $createData["UF_PROMOT"] = 0;
+        }
+        $createData["UF_PROMOTION"] = $promotion["ID"];
         $createData["UF_ACTIVE"] = "Y";
         $city = $user["PERSONAL_CITY"];
         $createData["UF_TOWN"] = $city;
+        $createData = array_merge($createData, $params);
         $wh = new WatchHighloadBlock();
         return $wh->create($createData);
     }
@@ -423,33 +432,34 @@ class AdService extends ServiceBase
         if(!$el){
             throw new EditException(message: "Не существует элемента с переданным id");
         }
-        if(in_array($el["status"], [self::POSTED, self::MOVING, self::REJECTED, self::CLOSED, self::MODERATED])){
+        if(in_array($el["status"], [self::POSTED, self::MOVING, self::REJECTED, self::CLOSED, self::MODERATED, self::UNPAYED])){
             //проверить на тариф и отправить ссылку
 
             $createData["UF_STATUS"] = self::MODERATED;
 
             if($el["status"] != self::MOVING){
                 if(!($el["status"] == self::MODERATED && empty($this->request["promotionType"]))){
-                    $promotion = Iblock::wakeUp(self::FIELDS["promotion_type"]["ref_id"])
-                        ->getEntityDataClass()::getByPrimary(
-                            empty($this->request["promotionType"]) ? $el["UF_PROMOTION"] : $this->request["promotionType"],
-                            ["select" => ["ID", "_PRICE"=>"PRICE.VALUE"]
-                            ])->fetch();
-                    if($promotion["_PRICE"]){
-                        $createData["UF_STATUS"] = self::UNPAYED;
-                        $createData["UF_PROMOT"] = 1;
-                        $createData["UF_PROMOTION"] = $promotion["ID"];
-                    }
-                    else {
-                        $createData["UF_PROMOT"] = 0;
-                        $createData["UF_PROMOTION"] = $promotion["ID"];
+                    if(!empty($this->request["promotionType"])){
+                        $promotion = Iblock::wakeUp(self::FIELDS["promotion_type"]["ref_id"])
+                            ->getEntityDataClass()::getByPrimary(
+                                $this->request["promotionType"],
+                                ["select" => ["ID", "_PRICE"=>"PRICE.VALUE"]
+                                ])->fetch();
+                        if($promotion["_PRICE"]){
+                            $createData["UF_STATUS"] = self::UNPAYED;
+                            $createData["UF_PROMOT"] = 1;
+                            $createData["UF_PROMOTION"] = $promotion["ID"];
+                        }
+                        else {
+                            $createData["UF_PROMOT"] = 0;
+                            $createData["UF_PROMOTION"] = $promotion["ID"];
+                        }
                     }
                 }
             }
             else {
                 unset($createData["UF_PROMOT"], $createData["UF_PROMOTION"]);
             }
-
         }
         $wh = new WatchHighloadBlock();
         $res = $wh->update($this->request["id"], $createData);
@@ -1049,17 +1059,27 @@ class AdService extends ServiceBase
             throw new AdNotFoundAuthException("Объявление не существует");
         }
 
-        if(!in_array($el["UF_STATUS"], [self::POSTED])){
+        if(!in_array($el["UF_STATUS"], [self::POSTED, self::UNPAYED])){
             throw new PublishException(
                 "Нельзя продвигать объявление со статусом \"{$el["STATUS_NAME"]}\"",
                 PublishException::ILLEGAL_STATUS
             );
         }
-        $editData = [
-            "UF_STATUS" => self::UNPAYED,
-            "UF_PROMOT" => "Y",
-            "UF_PROMOTION" => $this->request["promotionType"]
-        ];
+        $editData = [];
+        $promotion = Iblock::wakeUp(self::FIELDS["promotion_type"]["ref_id"])
+            ->getEntityDataClass()::getByPrimary(
+                $this->request["promotionType"],
+                ["select" => ["ID", "_PRICE"=>"PRICE.VALUE"]
+                ])->fetch();
+        if($promotion["_PRICE"]){
+            $editData["UF_STATUS"] = self::UNPAYED;
+            $editData["UF_PROMOT"] = 1;
+        }
+        else {
+            $editData["UF_STATUS"] = self::MODERATED;
+            $editData["UF_PROMOT"] = 0;
+        }
+        $editData["UF_PROMOTION"] = $promotion["ID"];
         $wh = new WatchHighloadBlock();
         return $wh->update($this->request["id"], $editData);
     }

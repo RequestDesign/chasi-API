@@ -512,8 +512,7 @@ class AdController extends Controller
                         (new Validation("description"))->maxLength(200),
                         (new Validation("photo"))->required()->image(3)->maxCount(10),
                         (new Validation("price"))->price()->required(),
-                        (new Validation("promotion"))->required()->bool(),
-                        (new Validation("promotionType"))->number(),
+                        (new Validation("promotionType"))->number()->required(),
                     ])
                 ]
             ],
@@ -543,8 +542,7 @@ class AdController extends Controller
                         (new Validation("description"))->maxLength(200),
                         (new Validation("photo"))->image(3)->maxCount(10),
                         (new Validation("price"))->price(),
-                        (new Validation("promotion"))->bool()->required(),
-                        (new Validation("promotionType"))->number()
+                        (new Validation("promotionType"))->number()->required()
                     ])
                 ]
             ],
